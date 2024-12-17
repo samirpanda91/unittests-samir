@@ -1,47 +1,41 @@
 import pytest
-from your_module import your_class  # Replace with the actual module and class
+from connection import get_engine, SessionLocal, get_session
 
-@pytest.mark.parametrize("max_ts, expected_result", [
-    (1690126637, 1690126637),  # Successful execution
-    (None, -sys.maxsize),       # Empty result set
+@pytest.mark.parametrize("env_var_name, env_var_value", [
+    ("ENVIRONMENT", "TEST"),
+    ("ORACLE_DSN_TEST", "some_dsn"),
 ])
-def test_get_bp_file_max_ts(mocker, max_ts, expected_result):
-    # Mock the database connection and cursor execution
-    mock_connection = mocker.MagicMock()
-    mock_cursor = mocker.MagicMock()
-    mock_connection.cursor.return_value = mock_cursor
-    mock_cursor.fetchone.return_value = [max_ts]
+def test_get_env_vars(monkeypatch, env_var_name, env_var_value):
+    # Mock os.environ.get() to return the specified value
+    monkeypatch.setattr('os.environ.get', lambda var_name: env_var_value if var_name == env_var_name else None)
 
-    # Create an instance of your class
-    obj = your_class()
-    obj.get_connection = mocker.MagicMock(return_value=mock_connection)
+    assert get_env_vars(env_var_name) == env_var_value
 
-    # Call the function and assert the result
-    result = obj.get_bp_file_max_ts()
-    assert result == expected_result
+def test_get_engine_success(monkeypatch):
+    # Mock os.environ.get() to return valid environment variable values
+    monkeypatch.setattr('os.environ.get', lambda var_name: 'TEST' if var_name == 'ENVIRONMENT' else 'some_dsn')
 
-# Test for database connection errors (example)
-def test_get_bp_file_max_ts_connection_error(mocker):
-    mock_connection = mocker.MagicMock()
-    mock_connection.cursor.side_effect = Exception("Connection error")
+    engine = get_engine()
+    assert engine is not None
 
-    obj = your_class()
-    obj.get_connection = mocker.MagicMock(return_value=mock_connection)
+def test_get_engine_failure(monkeypatch):
+    # Mock os.environ.get() to raise ValueError for missing environment variables
+    monkeypatch.setattr('os.environ.get', lambda var_name: None)
 
-    with pytest.raises(Exception) as excinfo:
-        obj.get_bp_file_max_ts()
-    assert "Connection error" in str(excinfo.value)
+    with pytest.raises(ValueError):
+        get_engine()
 
-# Test for unexpected data type (example)
-def test_get_bp_file_max_ts_unexpected_type(mocker):
-    mock_connection = mocker.MagicMock()
-    mock_cursor = mocker.MagicMock()
-    mock_connection.cursor.return_value = mock_cursor
-    mock_cursor.fetchone.return_value = ["not_an_int"]
+def test_get_session_success():
+    # Assuming get_engine() returns a valid engine
+    with get_session() as session:
+        assert session is not None
 
-    obj = your_class()
-    obj.get_connection = mocker.MagicMock(return_value=mock_connection)
+def test_get_session_failure(monkeypatch):
+    # Mock get_engine() to raise an exception
+    monkeypatch.setattr('connection.get_engine', lambda: None)
 
-    with pytest.raises(TypeError) as excinfo:
-        obj.get_bp_file_max_ts()
-    assert "int" in str(excinfo.value)
+    with pytest.raises(ValueError):
+        with get_session() as session:
+            pass  # Should raise an exception
+
+# Additional tests for error handling and edge cases can be added based on specific requirements and potential failure scenarios.
