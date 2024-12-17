@@ -1,41 +1,29 @@
 import pytest
-from connection import get_engine, SessionLocal, get_session
+from your_module import to_snake, get_hostname  # Replace 'your_module' with the actual module name
 
-@pytest.mark.parametrize("env_var_name, env_var_value", [
-    ("ENVIRONMENT", "TEST"),
-    ("ORACLE_DSN_TEST", "some_dsn"),
-])
-def test_get_env_vars(monkeypatch, env_var_name, env_var_value):
-    # Mock os.environ.get() to return the specified value
-    monkeypatch.setattr('os.environ.get', lambda var_name: env_var_value if var_name == env_var_name else None)
+def test_to_snake_camel_case():
+    assert to_snake("camelCaseWord") == "camel_case_word"
 
-    assert get_env_vars(env_var_name) == env_var_value
+def test_to_snake_mixed_case():
+    assert to_snake("MiXeD_CaSe_WoRd") == "mixed_case_word"
 
-def test_get_engine_success(monkeypatch):
-    # Mock os.environ.get() to return valid environment variable values
-    monkeypatch.setattr('os.environ.get', lambda var_name: 'TEST' if var_name == 'ENVIRONMENT' else 'some_dsn')
+def test_to_snake_all_caps():
+    assert to_snake("ALL_CAPS_WORD") == "all_caps_word"
 
-    engine = get_engine()
-    assert engine is not None
+def test_to_snake_already_snake_case():
+    assert to_snake("snake_case_word") == "snake_case_word"
 
-def test_get_engine_failure(monkeypatch):
-    # Mock os.environ.get() to raise ValueError for missing environment variables
-    monkeypatch.setattr('os.environ.get', lambda var_name: None)
+def test_to_snake_empty_string():
+    assert to_snake("") == ""
 
-    with pytest.raises(ValueError):
-        get_engine()
+def test_get_hostname_vdi():
+    with patch('socket.gethostname', return_value='VDI_HOSTNAME'):
+        assert get_hostname() == "127.0.0.1"
 
-def test_get_session_success():
-    # Assuming get_engine() returns a valid engine
-    with get_session() as session:
-        assert session is not None
+def test_get_hostname_cpc():
+    with patch('socket.gethostname', return_value='CPC_HOSTNAME'):
+        assert get_hostname() == "127.0.0.1"
 
-def test_get_session_failure(monkeypatch):
-    # Mock get_engine() to raise an exception
-    monkeypatch.setattr('connection.get_engine', lambda: None)
-
-    with pytest.raises(ValueError):
-        with get_session() as session:
-            pass  # Should raise an exception
-
-# Additional tests for error handling and edge cases can be added based on specific requirements and potential failure scenarios.
+def test_get_hostname_regular():
+    with patch('socket.gethostname', return_value='regular_hostname'):
+        assert get_hostname() == "regular_hostname.wellsfargo.com"
