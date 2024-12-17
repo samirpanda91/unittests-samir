@@ -1,48 +1,18 @@
-import unittest
-from unittest.mock import patch
-from app.schemas import get_incident_correlation, Session, query
+@patch('app.schemas.Session')
+@patch('app.schemas.query')
+async def test_get_incident_count_by_app_id_success(mock_query, mock_session):
+    # Mock query results
+    mock_query.all.return_value = [
+        (1, 10),
+        (2, 20)
+    ]
 
-class TestIncidentCorrelation(unittest.TestCase):
+    # Call the function
+    result = await get_incident_count_by_app_id()
 
-    @patch('app.schemas.Session')
-    @patch('app.schemas.query')
-    def test_get_incident_correlation_success(self, mock_query, mock_session):
-        # Mock query results
-        mock_query.one.return_value = namedtuple('Result', ['distinct_incident_id_count', 'distinct_entity_id_count', 'correlation_percetage'])(10, 20, 0.5)
-
-        # Call the function
-        result = get_incident_correlation()
-
-        # Assert expected values
-        self.assertEqual(result.distinct_incident_id_count, 10)
-        self.assertEqual(result.distinct_entity_id_count, 20)
-        self.assertEqual(result.correlation_percetage, 0.5)
-
-    @patch('app.schemas.Session')
-    @patch('app.schemas.query')
-    def test_get_incident_correlation_db_error(self, mock_query, mock_session):
-        # Mock a database error
-        mock_query.one.side_effect = Exception("Database error")
-
-        with self.assertRaises(HTTPException) as excinfo:
-            get_incident_correlation()
-
-        self.assertEqual(excinfo.value.status_code, 500)
-        self.assertEqual(str(excinfo.value.detail), "Database error")
-
-    @patch('app.schemas.Session')
-    @patch('app.schemas.query')
-    def test_get_incident_correlation_zero_correlation(self, mock_query, mock_session):
-        # Mock query results with zero correlation
-        mock_query.one.return_value = namedtuple('Result', ['distinct_incident_id_count', 'distinct_entity_id_count', 'correlation_percetage'])(10, 10, 0.0)
-
-        # Call the function
-        result = get_incident_correlation()
-
-        # Assert expected values
-        self.assertEqual(result.distinct_incident_id_count, 10)
-        self.assertEqual(result.distinct_entity_id_count, 10)
-        self.assertEqual(result.correlation_percetage, 0.0)
-
-if __name__ == '__main__':
-    unittest.main()
+    # Assert expected values
+    assert len(result) == 2
+    assert result[0].ci_wf_appid == 1
+    assert result[0].count == 10
+    assert result[1].ci_wf_appid == 2
+    assert result[1].count == 20
