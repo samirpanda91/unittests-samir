@@ -1,65 +1,14 @@
-import unittest
-from unittest.mock import patch
-import datetime
-import shutil
+import pytest
+from fastapi.testclient import TestClient
+from main import app
 
-from your_module import archive, validate_date, update_database
+client = TestClient(app)
 
-class TestArchive(unittest.TestCase):
+def test_create_item():
+    response = client.post("/items/", json={"name": "Foo", "price": 35.4})
+    assert response.status_code == 200
+    assert response.json() == {"name": "Foo", "price": 35.4}
 
-    @patch('your_module.sqlite3.connect')
-    @patch('your_module.shutil.move')
-    def test_archive_success(self, mock_shutil, mock_db):
-        mock_db.cursor.return_value.execute.return_value = [('path/to/folder1_2023-11-10')]
-        mock_shutil.move.return_value = None
-
-        archive('2023-11-10')
-
-        mock_db.cursor.return_value.execute.assert_called_once_with("SELECT FILE_DATE_DIR FROM AIOPS_ETL_INFO WHERE FILE_DATE_DIR LIKE '%/2023-11-10/'")
-        mock_shutil.move.assert_called_once_with('path/to/folder1_2023-11-10', 'archive/folder1_2023-11-10')
-        mock_db.cursor.return_value.execute.assert_called_with("UPDATE AIOPS_ETL_INFO SET ARCHIVE_STATUS='Archived' WHERE FILE_DATE_DIR=?", ('path/to/folder1_2023-11-10',))
-        mock_db.commit.assert_called_once()
-
-    def test_archive_invalid_date(self):
-        with self.assertRaises(ValueError):
-            archive('invalid_date')
-
-    @patch('your_module.sqlite3.connect')
-    @patch('your_module.shutil.move')
-    def test_archive_empty_query_result(self, mock_shutil, mock_db):
-        mock_db.cursor.return_value.execute.return_value = []
-
-        archive('2023-11-10')
-
-        mock_db.cursor.return_value.execute.assert_called_once_with("SELECT FILE_DATE_DIR FROM AIOPS_ETL_INFO WHERE FILE_DATE_DIR LIKE '%/2023-11-10/'")
-        mock_shutil.move.assert_not_called()
-        mock_db.commit.assert_not_called()
-
-    @patch('your_module.sqlite3.connect')
-    @patch('your_module.shutil.move')
-    def test_archive_folder_move_error(self, mock_shutil, mock_db):
-        mock_db.cursor.return_value.execute.return_value = [('path/to/folder1_2023-11-10')]
-        mock_shutil.move.side_effect = Exception("Error moving folder")
-
-        with self.assertRaises(Exception):
-            archive('2023-11-10')
-
-        mock_db.cursor.return_value.execute.assert_called_once_with("SELECT FILE_DATE_DIR FROM AIOPS_ETL_INFO WHERE FILE_DATE_DIR LIKE '%/2023-11-10/'")
-        mock_shutil.move.assert_called_once_with('path/to/folder1_2023-11-10', 'archive/folder1_2023-11-10')
-        mock_db.commit.assert_not_called()
-
-    @patch('your_module.sqlite3.connect')
-    @patch('your_module.shutil.move')
-    def test_archive_invalid_date_format_in_query_result(self, mock_shutil, mock_db):
-        mock_db.cursor.return_value.execute.return_value = [('path/to/invalid_folder')]
-
-        archive('2023-11-10')
-
-        mock_db.cursor.return_value.execute.assert_called_once_with("SELECT FILE_DATE_DIR FROM AIOPS_ETL_INFO WHERE FILE_DATE_DIR LIKE '%/2023-11-10/'")
-        mock_shutil.move.assert_not_called()
-        mock_db.commit.assert_not_called()
-
-# ... other test cases for different error scenarios and edge cases ...
-
-if __name__ == '__main__':
-    unittest.main()
+def test_create_item_invalid_json():
+    response = client.post("/items/", json={"price": 35.4})
+    assert response.status_code == 422
