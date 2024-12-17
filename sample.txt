@@ -1,146 +1,48 @@
+import unittest
+from unittest.mock import patch
+from app.schemas import get_incident_correlation, Session, query
 
-from unittest.mock import MagicMock, patch
-from archive import archive
+class TestIncidentCorrelation(unittest.TestCase):
 
-@patch("bpan_utils.database.Database")  # Replace the path with your actual import
-@patch("archive.Path.mkdir")
-@patch("shutil.move")
-def test_archive_with_valid_input_date(DatabaseMock, mock_mkdir, mock_shutil):
-    """
-    Test the archive function without requiring environment variables or credentials.
-    """
+    @patch('app.schemas.Session')
+    @patch('app.schemas.query')
+    def test_get_incident_correlation_success(self, mock_query, mock_session):
+        # Mock query results
+        mock_query.one.return_value = namedtuple('Result', ['distinct_incident_id_count', 'distinct_entity_id_count', 'correlation_percetage'])(10, 20, 0.5)
 
-    # Mock Database instance
-    mock_db_instance = MagicMock()
-    DatabaseMock.return_value = mock_db_instance
+        # Call the function
+        result = get_incident_correlation()
 
-    # Mock database method return values
-    mock_db_instance.execute.return_value = [
-        ["/aiops/storage_1/ETL/incoming/env1/2024-06-16_folder1"],
-        ["/aiops/storage_1/ETL/incoming/env1/2024-06-17_folder2"],
-    ]
-    mock_db_instance.update.return_value = None
+        # Assert expected values
+        self.assertEqual(result.distinct_incident_id_count, 10)
+        self.assertEqual(result.distinct_entity_id_count, 20)
+        self.assertEqual(result.correlation_percetage, 0.5)
 
-    # Call the archive function
-    archive(input_date="2024-06-16")
+    @patch('app.schemas.Session')
+    @patch('app.schemas.query')
+    def test_get_incident_correlation_db_error(self, mock_query, mock_session):
+        # Mock a database error
+        mock_query.one.side_effect = Exception("Database error")
 
-    # Assertions to verify behavior
-    DatabaseMock.assert_called_once()  # Database class was instantiated
-    mock_db_instance.execute.assert_called_once()  # execute method called
-    mock_db_instance.update.assert_called_once()  # update method called
-    mock_mkdir.assert_called()  # mkdir called for creating directories
-    mock_shutil.assert_called()  # shutil.move called for moving files
+        with self.assertRaises(HTTPException) as excinfo:
+            get_incident_correlation()
 
+        self.assertEqual(excinfo.value.status_code, 500)
+        self.assertEqual(str(excinfo.value.detail), "Database error")
 
+    @patch('app.schemas.Session')
+    @patch('app.schemas.query')
+    def test_get_incident_correlation_zero_correlation(self, mock_query, mock_session):
+        # Mock query results with zero correlation
+        mock_query.one.return_value = namedtuple('Result', ['distinct_incident_id_count', 'distinct_entity_id_count', 'correlation_percetage'])(10, 10, 0.0)
 
+        # Call the function
+        result = get_incident_correlation()
 
+        # Assert expected values
+        self.assertEqual(result.distinct_incident_id_count, 10)
+        self.assertEqual(result.distinct_entity_id_count, 10)
+        self.assertEqual(result.correlation_percetage, 0.0)
 
-
-
-
-
-
-import pytest
-from unittest.mock import MagicMock, patch, call
-from pathlib import Path
-from archive import archive
-
-# Mock datetime for today
-@pytest.fixture
-def mock_today(monkeypatch):
-    from datetime import datetime
-    mock_date = datetime(2024, 6, 17)  # Mocked today's date
-    class MockDatetime:
-        @staticmethod
-        def today():
-            return mock_date
-        @staticmethod
-        def strftime(fmt):
-            return mock_date.strftime(fmt)
-    monkeypatch.setattr("datetime.datetime", MockDatetime)
-
-@pytest.fixture
-def mock_database():
-    mock_db = MagicMock()
-    return mock_db
-
-@pytest.fixture
-def mock_shutil():
-    with patch("shutil.move") as mock_move:
-        yield mock_move
-
-@pytest.fixture
-def mock_path_exists():
-    with patch("pathlib.Path.exists", return_value=True) as mock_exists:
-        yield mock_exists
-
-@pytest.fixture
-def mock_mkdir():
-    with patch("pathlib.Path.mkdir") as mock_mkdir:
-        yield mock_mkdir
-
-# Test Cases
-def test_archive_with_valid_input_date(mock_database, mock_path_exists, mock_mkdir, mock_shutil, mock_today):
-    """
-    Test archive function with a valid input date and ensure database and file operations are called correctly.
-    """
-    mock_database.execute.return_value = [
-        ["/aiops/storage_1/ETL/incoming/env1/2024-06-16_folder1"],
-        ["/aiops/storage_1/ETL/incoming/env1/2024-06-17_folder2"]
-    ]
-    
-    with patch("archive.Database", return_value=mock_database):
-        archive(input_date="2024-06-16")
-
-    # Check database query execution
-    mock_database.execute.assert_called_once()
-    
-    # Check folder move operation
-    mock_shutil.assert_called_once()
-    mock_mkdir.assert_called_once()
-    
-    # Ensure current date folder is skipped
-    assert call(f"Skipping current date folder") not in mock_shutil.mock_calls
-
-def test_archive_skips_current_date_folder(mock_database, mock_path_exists, mock_today):
-    """
-    Ensure current date folders are skipped.
-    """
-    mock_database.execute.return_value = [
-        ["/aiops/storage_1/ETL/incoming/env1/2024-06-17_currentFolder"]
-    ]
-    
-    with patch("archive.Database", return_value=mock_database):
-        archive(input_date=None)
-
-    # No folder should be moved
-    mock_database.update.assert_not_called()
-
-def test_archive_invalid_folder_name(mock_database, mock_path_exists):
-    """
-    Test invalid folder names that don't split properly.
-    """
-    mock_database.execute.return_value = [
-        ["/aiops/storage_1/ETL/incoming/env1/invalid_folder_name"]
-    ]
-
-    with patch("archive.Database", return_value=mock_database):
-        archive(input_date=None)
-    
-    # Ensure invalid format is logged and skipped
-    mock_database.update.assert_not_called()
-
-def test_archive_handles_move_failure(mock_database, mock_path_exists, mock_shutil):
-    """
-    Test if archive handles shutil.move failure gracefully.
-    """
-    mock_database.execute.return_value = [
-        ["/aiops/storage_1/ETL/incoming/env1/2024-06-16_folder1"]
-    ]
-    mock_shutil.side_effect = Exception("Move failed")
-
-    with patch("archive.Database", return_value=mock_database):
-        archive(input_date="2024-06-16")
-
-    # Ensure failure is logged but processing continues
-    mock_database.update.assert_not_called()
+if __name__ == '__main__':
+    unittest.main()
