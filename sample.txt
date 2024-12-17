@@ -1,3 +1,45 @@
+
+from unittest.mock import MagicMock, patch
+from archive import archive
+
+@patch("bpan_utils.database.Database")  # Replace the path with your actual import
+@patch("archive.Path.mkdir")
+@patch("shutil.move")
+def test_archive_with_valid_input_date(DatabaseMock, mock_mkdir, mock_shutil):
+    """
+    Test the archive function without requiring environment variables or credentials.
+    """
+
+    # Mock Database instance
+    mock_db_instance = MagicMock()
+    DatabaseMock.return_value = mock_db_instance
+
+    # Mock database method return values
+    mock_db_instance.execute.return_value = [
+        ["/aiops/storage_1/ETL/incoming/env1/2024-06-16_folder1"],
+        ["/aiops/storage_1/ETL/incoming/env1/2024-06-17_folder2"],
+    ]
+    mock_db_instance.update.return_value = None
+
+    # Call the archive function
+    archive(input_date="2024-06-16")
+
+    # Assertions to verify behavior
+    DatabaseMock.assert_called_once()  # Database class was instantiated
+    mock_db_instance.execute.assert_called_once()  # execute method called
+    mock_db_instance.update.assert_called_once()  # update method called
+    mock_mkdir.assert_called()  # mkdir called for creating directories
+    mock_shutil.assert_called()  # shutil.move called for moving files
+
+
+
+
+
+
+
+
+
+
 import pytest
 from unittest.mock import MagicMock, patch, call
 from pathlib import Path
