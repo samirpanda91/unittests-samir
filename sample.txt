@@ -1,0 +1,10 @@
+# Process conditions
+def evaluate_conditions(conditions, input_data, default):
+    for condition in conditions:
+        key = condition['when']['condition_key']
+        operator = condition['when']['operator']
+        value = condition['when']['value']
+        if key in input_data:
+            if operator == "equals" and input_data[key] == value:
+                return condition['result']
+    return default
