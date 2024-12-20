@@ -8,3 +8,8 @@ def evaluate_conditions(conditions, input_data, default):
             if operator == "equals" and input_data[key] == value:
                 return condition['result']
     return default
+
+
+
+
+https://hdfcbk.io/HDFCBK/s/8vK26qJX
