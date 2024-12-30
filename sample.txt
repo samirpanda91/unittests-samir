@@ -12,4 +12,35 @@ def evaluate_conditions(conditions, input_data, default):
 
 
 
-https://hdfcbk.io/HDFCBK/s/8vK26qJX
+https://hdfcbk.io/HDFCBK/s/8vK
+
+
+def filter_text_file(input_file, output_file):
+    with open(input_file, 'r') as infile:
+        lines = infile.readlines()
+    
+    keep_lines = []
+    skip = False
+    delete_block = False
+
+    for i, line in enumerate(lines):
+        if line.strip().startswith('// test'):
+            skip = True  # Start skipping when encountering any `// test` line
+        
+        if 'Some data 2' in line and skip:
+            delete_block = True  # Activate delete block if "Some data 2" is found during skip
+        
+        if line.strip().startswith('// test') and skip and delete_block:
+            skip = False
+            delete_block = False
+            continue  # Skip this `// test` line as well
+        
+        if not skip:
+            keep_lines.append(line)
+
+    with open(output_file, 'w') as outfile:
+        outfile.writelines(keep_lines)
+
+
+# Usage
+filter_text_file('input.txt', 'output.txt')
