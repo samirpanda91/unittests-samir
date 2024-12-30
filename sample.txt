@@ -1,20 +1,3 @@
-# Process conditions
-def evaluate_conditions(conditions, input_data, default):
-    for condition in conditions:
-        key = condition['when']['condition_key']
-        operator = condition['when']['operator']
-        value = condition['when']['value']
-        if key in input_data:
-            if operator == "equals" and input_data[key] == value:
-                return condition['result']
-    return default
-
-
-
-
-https://hdfcbk.io/HDFCBK/s/8vK
-
-
 def filter_text_file(input_file, output_file):
     with open(input_file, 'r') as infile:
         lines = infile.readlines()
@@ -23,17 +6,16 @@ def filter_text_file(input_file, output_file):
     skip = False
     delete_block = False
 
-    for i, line in enumerate(lines):
+    for line in lines:
         if line.strip().startswith('// test'):
-            skip = True  # Start skipping when encountering any `// test` line
+            if skip and delete_block:
+                skip = False
+                delete_block = False
+                continue  # Skip this `// test` line as it ends the block
+            skip = True  # Start skipping when encountering `// test`
         
         if 'Some data 2' in line and skip:
-            delete_block = True  # Activate delete block if "Some data 2" is found during skip
-        
-        if line.strip().startswith('// test') and skip and delete_block:
-            skip = False
-            delete_block = False
-            continue  # Skip this `// test` line as well
+            delete_block = True  # Mark delete block if 'Some data 2' is encountered while skipping
         
         if not skip:
             keep_lines.append(line)
