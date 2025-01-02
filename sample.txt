@@ -1,28 +1,48 @@
-def filter_text_file(input_file, output_file):
-    with open(input_file, 'r') as infile:
-        lines = infile.readlines()
-    
-    keep_lines = []
-    skip = False
-    delete_block = False
+def delete_blocks_with_pb3_filter(input_file, output_file):
+    """
+    Deletes blocks of code in a file where the line "insert_filter: PB3" is present.
+    The deletion starts from the beginning of the block (starting with "// view") 
+    and continues until the next "// view" line.
 
-    for line in lines:
-        if line.strip().startswith('// test'):
-            if skip and delete_block:
-                skip = False
-                delete_block = False
-                continue  # Skip this `// test` line as it ends the block
-            skip = True  # Start skipping when encountering `// test`
-        
-        if 'Some data 2' in line and skip:
-            delete_block = True  # Mark delete block if 'Some data 2' is encountered while skipping
-        
-        if not skip:
-            keep_lines.append(line)
+    Args:
+        input_file: Path to the input file.
+        output_file: Path to the output file.
+    """
 
-    with open(output_file, 'w') as outfile:
-        outfile.writelines(keep_lines)
+    with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:
+        in_pb3_block = False
+        for line in infile:
+            if line.startswith("// view"):
+                if "insert_filter: PB3" in line:
+                    in_pb3_block = True
+                elif in_pb3_block:
+                    in_pb3_block = False
+            if not in_pb3_block:
+                outfile.write(line)
 
+if __name__ == "__main__":
+    input_filename = "input.txt"  # Replace with the actual input file name
+    output_filename = "output.txt"  # Replace with the desired output file name
+    delete_blocks_with_pb3_filter(input_filename, output_filename)
 
-# Usage
-filter_text_file('input.txt', 'output.txt')
+Explanation:
+ * Function Definition:
+   * delete_blocks_with_pb3_filter(input_file, output_file): Takes the input and output file paths as arguments.
+ * File Handling:
+   * Opens both the input and output files in read and write mode, respectively.
+ * Block Deletion Logic:
+   * in_pb3_block: A boolean variable to track whether the current line is within a block to be deleted.
+   * Iterates through each line in the input file:
+     * If the line starts with "// view":
+       * Checks if "insert_filter: PB3" is present in the line. If so, sets in_pb3_block to True.
+       * If in_pb3_block is True, it means we are currently within a block to be deleted.
+       * If neither of the above conditions is met, it means we have reached the end of a block to be deleted, so sets in_pb3_block to False.
+     * If in_pb3_block is False, write the current line to the output file.
+ * Main Execution:
+   * Sets the input_filename and output_filename variables to the desired file names.
+   * Calls the delete_blocks_with_pb3_filter function with the input and output filenames.
+How to Use:
+ * Save the code as a Python file (e.g., delete_blocks.py).
+ * Replace input.txt and output.txt with the actual file names in the if __name__ == "__main__": block.
+ * Run the script from your terminal using python delete_blocks.py.
+This will create a new file (output.txt) containing the code without the blocks that include "insert_filter: PB3".
