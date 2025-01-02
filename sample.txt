@@ -1,3 +1,24 @@
+import re
+
+# Read input text file
+with open('input.txt', 'r') as file:
+    content = file.read()
+
+# Define the regex pattern to match blocks starting with // View * containing insert_filter: PB3
+pattern = r'(\/\/ View [^\n]*\n(?:.+\n)*?insert_filter: PB3(?:.+\n)*?)(?=\/\/ View |\Z)'
+
+# Remove matching blocks
+cleaned_content = re.sub(pattern, '', content, flags=re.MULTILINE)
+
+# Write the cleaned content to an output file
+with open('output.txt', 'w') as file:
+    file.write(cleaned_content)
+
+print("Filtered content saved to output.txt")
+
+
+
+
 def delete_blocks_with_pb3_filter(input_file, output_file):
     """
     Deletes blocks of code in a file where the line "insert_filter: PB3" is present.
