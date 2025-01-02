@@ -1,3 +1,34 @@
+import re
+
+# Read input text file
+with open('input.txt', 'r') as file:
+    content = file.read()
+
+# Step 1: Extract all blocks starting with // View
+blocks = re.split(r'(\/\/ View [^\n]*\n)', content)
+
+# Step 2: Process each block
+updated_content = ''
+for i in range(1, len(blocks), 2):
+    header = blocks[i]  # The `// View ...` line
+    block = blocks[i + 1] if i + 1 < len(blocks) else ''
+    
+    # Check if 'insert_filter: PB3' exists in the block
+    if 'insert_filter: PB3' not in block:
+        block += 'insert_filter: PB3\n'
+    
+    updated_content += header + block
+
+# Write the updated content to an output file
+with open('output.txt', 'w') as file:
+    file.write(updated_content)
+
+print("Updated content saved to output.txt")
+
+
+
+
+
 
 import re
 
