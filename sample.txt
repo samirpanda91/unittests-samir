@@ -1,3 +1,26 @@
+
+import re
+
+# Read input text file
+with open('input.txt', 'r') as file:
+    content = file.read()
+
+# Define the regex pattern to match and remove blocks containing 'insert_filter: PB3'
+pattern = r'(\/\/ View [^\n]*\n(?:.*\n)*?insert_filter:\s*PB3(?:.*\n)*?)(?=\/\/ View|\Z)'
+
+# Remove matching blocks
+cleaned_content = re.sub(pattern, '', content, flags=re.MULTILINE)
+
+# Write the cleaned content to an output file
+with open('output.txt', 'w') as file:
+    file.write(cleaned_content)
+
+print("Filtered content saved to output.txt")
+
+
+
+
+
 import re
 
 # Read input text file
