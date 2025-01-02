@@ -4,6 +4,34 @@ import re
 with open('input.txt', 'r') as file:
     content = file.read()
 
+# Regex to match blocks starting with '// View' up to the next '// View' or end of file
+pattern = r'(\/\/ View [^\n]*\n(?:.*?\n)*?)(?=\/\/ View|\Z)'
+
+# Function to add 'insert_filter: PB3' if not present in a block
+def ensure_insert_filter(block):
+    if 'insert_filter: PB3' not in block:
+        block = block.strip() + '\ninsert_filter: PB3\n'
+    return block
+
+# Apply the function to each matched block
+cleaned_content = re.sub(pattern, lambda m: ensure_insert_filter(m.group(1)), content, flags=re.MULTILINE)
+
+# Write the cleaned content to an output file
+with open('output.txt', 'w') as file:
+    file.write(cleaned_content)
+
+print("Filtered content saved to output.txt")
+
+
+
+
+
+import re
+
+# Read input text file
+with open('input.txt', 'r') as file:
+    content = file.read()
+
 # Step 1: Extract all blocks starting with // View
 blocks = re.split(r'(\/\/ View [^\n]*\n)', content)
 
