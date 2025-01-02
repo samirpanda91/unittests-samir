@@ -4,6 +4,35 @@ import re
 with open('input.txt', 'r') as file:
     content = file.read()
 
+# Match blocks starting with `// View` and ending before the next `// View` or end of the file
+pattern = r'(\/\/ View [^\n]*\n(?:.*\n)*?)(?=\/\/ View|\Z)'
+
+# Filter out blocks containing 'insert_filter: PB3'
+def should_remove_block(block):
+    return 'insert_filter: PB3' in block
+
+# Apply filtering
+cleaned_content = ''.join(
+    block for block in re.findall(pattern, content, flags=re.MULTILINE) 
+    if not should_remove_block(block)
+)
+
+# Write the cleaned content to an output file
+with open('output.txt', 'w') as file:
+    file.write(cleaned_content)
+
+print("Filtered content saved to output.txt")
+
+
+
+
+
+import re
+
+# Read input text file
+with open('input.txt', 'r') as file:
+    content = file.read()
+
 # Split the content into blocks based on '// View'
 blocks = re.split(r'(\/\/ View [^\n]*\n)', content)
 
