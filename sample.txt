@@ -1,14 +1,26 @@
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.testclient import TestClient
+from app import app
 
-app = FastAPI()
+client = TestClient(app)
 
-# Static file directory (optional if you have multiple files to serve)
-app.mount("/files", StaticFiles(directory="files"), name="files")
+def test_download_script():
+    # Send a GET request to the download endpoint
+    response = client.get("/download-script")
+    
+    # Check if the response status code is 200
+    assert response.status_code == 200, "Failed to download the file"
+    
+    # Check the content disposition header to verify the file download
+    assert (
+        response.headers["content-disposition"] == 'attachment; filename="script.py"'
+    ), "Incorrect file name in the response"
+    
+    # Verify the file content (optional)
+    with open("files/script.py", "rb") as f:
+        expected_content = f.read()
+    assert response.content == expected_content, "File content does not match"
 
-# Endpoint to download the script
-@app.get("/download-script", summary="Download Script", description="Click to download the script.py file.")
-def download_script():
-    file_path = "files/script.py"
-    return FileResponse(path=file_path, filename="script.py", media_type="application/octet-stream")
+    # Check the content type
+    assert (
+        response.headers["content-type"] == "application/octet-stream"
+    ), "Incorrect content type"
