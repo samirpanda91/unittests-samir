@@ -1,6 +1,14 @@
-As a software engineer, I aim to implement the following enhancements for the ETL process:
-	1.	Migration to a New Repository: Transition the ETL codebase to a new repository that aligns with EPL compliance standards.
-	2.	Robust Error Handling: Develop an error-handling mechanism capable of automatically reprocessing failed files and updating the database accordingly.
-	3.	Query Failure Management: Introduce error-handling strategies to address and manage failed queries within the ETL workflow.
-	4.	Database Enhancements: Apply necessary modifications to the database to support the newly implemented error-handling mechanisms.
-	5.	Environment Variable Security: Securely migrate environment variables to HashiCorp Vault for better password management and security.
+from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
+app = FastAPI()
+
+# Static file directory (optional if you have multiple files to serve)
+app.mount("/files", StaticFiles(directory="files"), name="files")
+
+# Endpoint to download the script
+@app.get("/download-script", summary="Download Script", description="Click to download the script.py file.")
+def download_script():
+    file_path = "files/script.py"
+    return FileResponse(path=file_path, filename="script.py", media_type="application/octet-stream")
