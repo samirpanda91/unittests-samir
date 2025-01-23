@@ -1,40 +1,33 @@
-from fastapi.testclient import TestClient
-from pathlib import Path
-from app import app
+from datetime import datetime
 
-client = TestClient(app)
-
-# Define the path to the files directory
-FILES_DIR = Path("files")
-
-def test_download_existing_file():
-    # Use a valid file name that exists in the files directory
-    file_name = "script1.py"
-    response = client.get(f"/files/{file_name}")
-
-    # Assertions
-    assert response.status_code == 200
-    assert response.headers["content-type"] == "application/octet-stream"
-    assert "content-disposition" in response.headers
-    assert response.headers["content-disposition"] == f'attachment; filename="{file_name}"'
-    assert response.content == (FILES_DIR / file_name).read_bytes()
-
-
-def test_download_nonexistent_file():
-    # Use an invalid file name that does not exist
-    file_name = "nonexistent.py"
-    response = client.get(f"/files/{file_name}")
-
-    # Assertions
-    assert response.status_code == 404
-    assert response.json() == {"detail": "File not found"}
-
-
-def test_download_directory_traversal_attack():
-    # Attempt directory traversal with a path like "../../etc/passwd"
-    file_name = "../../etc/passwd"
-    response = client.get(f"/files/{file_name}")
-
-    # Assertions
-    assert response.status_code == 404
-    assert response.json() == {"detail": "File not found"}
+def get_incident_filter_conditions(self, query, value, column, field):
+    if isinstance(value, list):
+        if field in ("incidentStartTime", "incidentEndTime") and len(value) == 2:
+            try:
+                start_time = datetime.fromisoformat(value[0])
+                end_time = datetime.fromisoformat(value[1])
+                query = query.filter(column.between(start_time, end_time))
+            except ValueError:
+                raise ValueError(
+                    f"Invalid date format in list for {field}: Expected format: YYYY-MM-DD HH:MM:SS"
+                )
+        else:
+            query = query.filter(column.in_(value))
+    elif field in ("incidentStartTime", "incidentEndTime") and isinstance(value, str):
+        try:
+            incident_time = datetime.fromisoformat(value)
+            if field == "incidentStartTime":
+                query = query.filter(column > incident_time)
+            else:
+                query = query.filter(column < incident_time)
+        except ValueError:
+            raise ValueError(
+                f"Invalid date format for {field}: Expected format: YYYY-MM-DD HH:MM:SS"
+            )
+    elif isinstance(value, str) and value.strip().lower() == "not null":
+        query = query.filter(column.is_not(None))
+    elif isinstance(value, str) and value.strip().lower() == "null":
+        query = query.filter(column.is_(None))
+    else:
+        query = query.filter(column == value)
+    return query
