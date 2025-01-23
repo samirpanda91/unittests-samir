@@ -1,111 +1,128 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
-from your_module import Query, BigPandaIncidentsView, BigPandaIncidentsBySource
+from unittest.mock import MagicMock
+from your_module import Query
 
 @pytest.fixture
-def mock_session():
-    # Mock SQLAlchemy session
-    session = MagicMock()
-    session.query.return_value = session
-    session.filter.return_value = session
-    session.all.return_value = []
-    session.count.return_value = 10
-    return session
+def mock_session(mocker):
+    """Mock the database session with necessary methods."""
+    mock_session = MagicMock()
+    mocker.patch.object(mock_session, "query", return_value=mock_session)
+    mocker.patch.object(mock_session, "filter", return_value=mock_session)
+    mocker.patch.object(mock_session, "all", return_value=[])
+    mocker.patch.object(mock_session, "count", return_value=0)
+    return mock_session
 
 @pytest.fixture
 def mock_info():
-    # Mock Strawberry's `info` object
+    """Fixture for a mocked Strawberry `info` object."""
     return MagicMock(context={"page": 1, "request": MagicMock(url="http://test.com?page=1")})
 
 @pytest.mark.asyncio
-async def test_get_incidents(mock_session, mock_info):
-    with patch("your_module.Database.get_session", return_value=mock_session), \
-         patch("your_module.logger") as mock_logger:
-        query = Query()
-        result = await query.get_incidents(mock_info, page=1, filters={"incidentStartTime": "2025-01-01"})
+async def test_get_incidents(mocker, mock_session, mock_info):
+    """Test get_incidents function."""
+    # Mock session and return values
+    mocker.patch("your_module.Database.get_session", return_value=mock_session)
+    mock_session.all.return_value = [
+        MagicMock(incident_id=1, name="Incident 1", incidentStartTime="2025-01-01T12:00:00"),
+        MagicMock(incident_id=2, name="Incident 2", incidentStartTime="2025-01-02T12:00:00"),
+    ]
+    mock_session.count.return_value = 15
 
-        mock_logger.info.assert_called_with("Fetching data with filters:{'incidentStartTime': '2025-01-01'}")
-        assert result.page_info == "1 of 1"
-        assert result.incident_data == []
+    # Call the function
+    query = Query()
+    result = await query.get_incidents(mock_info, page=1, filters={})
 
-@pytest.mark.asyncio
-async def test_get_incident_count_by_source(mock_session):
-    with patch("your_module.Database.get_session", return_value=mock_session), \
-         patch("your_module.logger") as mock_logger:
-        mock_session.query().all.return_value = [
-            MagicMock(entity_class="source1", count=5),
-            MagicMock(entity_class="source2", count=10)
-        ]
-        query = Query()
-        result = await query.get_incident_count_by_source()
-
-        mock_logger.info.assert_called_with("Fetching alerts count by source")
-        assert len(result) == 2
-        assert result[0].entity_class == "source1"
-        assert result[0].count == 5
+    # Assertions
+    assert result.page_info == "1 of 2"
+    assert len(result.incident_data) == 2
+    assert result.incident_data[0].name == "Incident 1"
 
 @pytest.mark.asyncio
-async def test_get_incident_count_by_assignment_group(mock_session):
-    with patch("your_module.Database.get_session", return_value=mock_session), \
-         patch("your_module.logger") as mock_logger:
-        mock_session.query().all.return_value = [
-            MagicMock(event_ticket="group1", count=8),
-            MagicMock(event_ticket="group2", count=12)
-        ]
-        query = Query()
-        result = await query.get_incident_count_by_assignment_group()
+async def test_get_incident_count_by_source(mocker, mock_session, mock_info):
+    """Test get_incident_count_by_source function."""
+    mocker.patch("your_module.Database.get_session", return_value=mock_session)
+    mock_session.all.return_value = [
+        MagicMock(source="Service A", count=10),
+        MagicMock(source="Service B", count=5),
+    ]
 
-        mock_logger.info.assert_called_with("Fetching alerts count by assignment group")
-        assert len(result) == 2
-        assert result[0].event_ticket == "group1"
-        assert result[0].count == 8
+    # Call the function
+    query = Query()
+    result = await query.get_incident_count_by_source(mock_info)
 
-@pytest.mark.asyncio
-async def test_get_incident_count_by_event_name(mock_session):
-    with patch("your_module.Database.get_session", return_value=mock_session), \
-         patch("your_module.logger") as mock_logger:
-        mock_session.query().all.return_value = [
-            MagicMock(event_name="event1", count=3),
-            MagicMock(event_name="event2", count=7)
-        ]
-        query = Query()
-        result = await query.get_incident_count_by_event_name()
-
-        mock_logger.info.assert_called_with("Fetching alerts count by event name")
-        assert len(result) == 2
-        assert result[0].event_name == "event1"
-        assert result[0].count == 3
+    # Assertions
+    assert len(result) == 2
+    assert result[0].source == "Service A"
+    assert result[0].count == 10
 
 @pytest.mark.asyncio
-async def test_get_incident_count_by_app_id(mock_session):
-    with patch("your_module.Database.get_session", return_value=mock_session), \
-         patch("your_module.logger") as mock_logger:
-        mock_session.query().all.return_value = [
-            MagicMock(ci_wf_appid="app1", count=4),
-            MagicMock(ci_wf_appid="app2", count=6)
-        ]
-        query = Query()
-        result = await query.get_incident_count_by_app_id()
+async def test_get_incident_count_by_event_name(mocker, mock_session, mock_info):
+    """Test get_incident_count_by_event_name function."""
+    mocker.patch("your_module.Database.get_session", return_value=mock_session)
+    mock_session.all.return_value = [
+        MagicMock(event_name="Event 1", count=7),
+        MagicMock(event_name="Event 2", count=3),
+    ]
 
-        mock_logger.info.assert_called_with("Fetching alerts count by app id")
-        assert len(result) == 2
-        assert result[0].ci_wf_appid == "app1"
-        assert result[0].count == 4
+    # Call the function
+    query = Query()
+    result = await query.get_incident_count_by_event_name(mock_info)
+
+    # Assertions
+    assert len(result) == 2
+    assert result[0].event_name == "Event 1"
+    assert result[0].count == 7
 
 @pytest.mark.asyncio
-async def test_get_incident_correlation(mock_session):
-    with patch("your_module.Database.get_session", return_value=mock_session), \
-         patch("your_module.logger") as mock_logger:
-        mock_session.query().one.return_value = MagicMock(
-            distinct_incident_id_count=100,
-            distinct_entity_id_count=50,
-            correlation_percetage=2.0
-        )
-        query = Query()
-        result = await query.get_incident_correlation()
+async def test_get_incident_count_by_assignment_group(mocker, mock_session, mock_info):
+    """Test get_incident_count_by_assignment_group function."""
+    mocker.patch("your_module.Database.get_session", return_value=mock_session)
+    mock_session.all.return_value = [
+        MagicMock(assignment_group="Group A", count=8),
+        MagicMock(assignment_group="Group B", count=4),
+    ]
 
-        mock_logger.info.assert_called_with("Fetching alerts correlation percetnage")
-        assert result.distinct_incident_id_count == 100
-        assert result.distinct_entity_id_count == 50
-        assert result.correlation_percetage == 2.0
+    # Call the function
+    query = Query()
+    result = await query.get_incident_count_by_assignment_group(mock_info)
+
+    # Assertions
+    assert len(result) == 2
+    assert result[0].assignment_group == "Group A"
+    assert result[0].count == 8
+
+@pytest.mark.asyncio
+async def test_get_incident_count_by_app_id(mocker, mock_session, mock_info):
+    """Test get_incident_count_by_app_id function."""
+    mocker.patch("your_module.Database.get_session", return_value=mock_session)
+    mock_session.all.return_value = [
+        MagicMock(app_id="App 1", count=12),
+        MagicMock(app_id="App 2", count=6),
+    ]
+
+    # Call the function
+    query = Query()
+    result = await query.get_incident_count_by_app_id(mock_info)
+
+    # Assertions
+    assert len(result) == 2
+    assert result[0].app_id == "App 1"
+    assert result[0].count == 12
+
+@pytest.mark.asyncio
+async def test_get_incident_correlation(mocker, mock_session, mock_info):
+    """Test get_incident_correlation function."""
+    mocker.patch("your_module.Database.get_session", return_value=mock_session)
+    mock_session.all.return_value = [
+        MagicMock(correlation_key="Key 1", percentage=50),
+        MagicMock(correlation_key="Key 2", percentage=30),
+    ]
+
+    # Call the function
+    query = Query()
+    result = await query.get_incident_correlation(mock_info)
+
+    # Assertions
+    assert len(result) == 2
+    assert result[0].correlation_key == "Key 1"
+    assert result[0].percentage == 50
