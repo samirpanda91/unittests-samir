@@ -1,33 +1,55 @@
-from datetime import datetime
-
 def get_incident_filter_conditions(self, query, value, column, field):
+    """
+    Function to handle query filter conditions
+    Args:
+        value (String): Field value from query
+        column (String): Name of column
+        field (String): Field name from model
+    Raises:
+        ValueError: Date format validation
+    """
     if isinstance(value, list):
-        if field in ("incidentStartTime", "incidentEndTime") and len(value) == 2:
-            try:
-                start_time = datetime.fromisoformat(value[0])
-                end_time = datetime.fromisoformat(value[1])
-                query = query.filter(column.between(start_time, end_time))
-            except ValueError:
-                raise ValueError(
-                    f"Invalid date format in list for {field}: Expected format: YYYY-MM-DD HH:MM:SS"
-                )
-        else:
-            query = query.filter(column.in_(value))
-    elif field in ("incidentStartTime", "incidentEndTime") and isinstance(value, str):
-        try:
-            incident_time = datetime.fromisoformat(value)
-            if field == "incidentStartTime":
-                query = query.filter(column > incident_time)
-            else:
-                query = query.filter(column < incident_time)
-        except ValueError:
-            raise ValueError(
-                f"Invalid date format for {field}: Expected format: YYYY-MM-DD HH:MM:SS"
-            )
-    elif isinstance(value, str) and value.strip().lower() == "not null":
-        query = query.filter(column.is_not(None))
-    elif isinstance(value, str) and value.strip().lower() == "null":
-        query = query.filter(column.is_(None))
+        query = self._handle_list_value(query, value, column, field)
+    elif field in datetime_columns and isinstance(value, str):
+        query = self._handle_datetime_value(query, value, column, field)
+    elif isinstance(value, str):
+        query = self._handle_string_value(query, value, column)
     else:
         query = query.filter(column == value)
+
+    return query
+
+def _handle_list_value(self, query, value, column, field):
+    if field in datetime_columns:
+        try:
+            start_time = datetime.fromisoformat(value[0])
+            end_time = datetime.fromisoformat(value[1])
+            query = query.filter(column.between(start_time, end_time))
+        except ValueError:
+            raise ValueError(
+                f"Invalid date format in list for {field}: Expected format: YYYY-MM-DD HH:MM:SS"
+            )
+    else:
+        query = query.filter(column.in_(value))
+    return query
+
+def _handle_datetime_value(self, query, value, column, field):
+    try:
+        incident_time = datetime.fromisoformat(value)
+        if field == "incidentStartTime":
+            query = query.filter(column >= incident_time)
+        else:
+            query = query.filter(column < incident_time)
+    except ValueError:
+        raise ValueError(
+            f"Invalid date format for {field}: Expected format: YYYY-MM-DD HH:MM:SS"
+        )
+    return query
+
+def _handle_string_value(self, query, value, column):
+    value_lower = value.strip().lower()
+    if value_lower == "not null":
+        query = query.filter(column.is_not(None))
+    elif value_lower == "null":
+        query = query.filter(column.is_(None))
     return query
