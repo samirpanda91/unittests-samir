@@ -33,3 +33,25 @@ To use this script:
  * Make the script executable: chmod +x stop_script.sh
  * Run the script: ./stop_script.sh
 This script will send the SIGTERM signal to each running instance of your Python script and wait for them to terminate gracefully before proceeding. This ensures that your Python scripts have a chance to clean up any resources they are using before being terminated.
+
+#!/bin/bash
+
+# Get the PID of the parent Python script
+PARENT_PID=$(pgrep -f "python .*your_script_name.py")
+
+if [ -z "$PARENT_PID" ]; then
+  echo "No running process found for the script."
+  exit 1
+fi
+
+# Send SIGTERM to the parent process
+echo "Stopping the script with PID: $PARENT_PID..."
+kill -SIGTERM "$PARENT_PID"
+
+# Wait for the process to terminate
+while ps -p "$PARENT_PID" > /dev/null; do
+  echo "Waiting for process $PARENT_PID to terminate..."
+  sleep 1
+done
+
+echo "Script stopped successfully."
