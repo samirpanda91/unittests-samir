@@ -55,3 +55,39 @@ while ps -p "$PARENT_PID" > /dev/null; do
 done
 
 echo "Script stopped successfully."
+
+
+#!/bin/bash
+
+# Path to the PID file created by the start script
+PID_FILE="path/to/your_script.pid"
+
+# Check if the PID file exists
+if [ ! -f "$PID_FILE" ]; then
+  echo "PID file not found: $PID_FILE"
+  exit 1
+fi
+
+# Read the PID from the file
+PID=$(cat "$PID_FILE")
+
+# Check if the process is running
+if ps -p "$PID" > /dev/null 2>&1; then
+  echo "Stopping process with PID: $PID"
+  kill -15 "$PID"  # Send SIGTERM signal
+
+  # Wait for the process to terminate
+  while ps -p "$PID" > /dev/null 2>&1; do
+    echo "Waiting for process $PID to stop..."
+    sleep 1
+  done
+
+  echo "Process $PID has stopped."
+else
+  echo "No process found with PID: $PID"
+fi
+
+# Clean up the PID file
+rm -f "$PID_FILE"
+echo "PID file removed: $PID_FILE"
+
