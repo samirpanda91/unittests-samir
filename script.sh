@@ -91,3 +91,27 @@ fi
 rm -f "$PID_FILE"
 echo "PID file removed: $PID_FILE"
 
+
+
+status script
+
+#!/bin/bash
+
+# Path to the PID file
+PID_FILE="path/to/your_script.pid"
+
+# Check if the PID file exists
+if [ ! -f "$PID_FILE" ]; then
+  echo "Status: PID file not found. The script is not running."
+  exit 1
+fi
+
+# Read the PID from the file
+PID=$(cat "$PID_FILE")
+
+# Check if the process is running
+if ps -p "$PID" > /dev/null 2>&1; then
+  echo "Status: The script is running with PID $PID."
+else
+  echo "Status: No process found with PID $PID. The script is not running."
+fi
