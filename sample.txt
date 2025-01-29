@@ -1,28 +1,51 @@
-import pytest
-from httpx import AsyncClient
-from main import app  # Import your FastAPI app
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from app.service.token_validation import TokenManager
 
-@pytest.mark.asyncio
-async def test_graphql_query_books():
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        query = """
-        query {
-            books {
-                id
-                title
-                author
-            }
-        }
-        """
-        response = await client.post("/graphql", json={"query": query})
+router = APIRouter()
+token_mgr = TokenManager()
+security = HTTPBearer()
 
-    # Assert the response status and data
-    assert response.status_code == 200
-    data = response.json()
-    assert "data" in data
-    assert "books" in data["data"]
+@router.post("/auth/validate-token")
+async def validate_token(
+    authorization: HTTPAuthorizationCredentials = Depends(security)
+):
+    """
+    API endpoint for Apigee to validate tokens.
+    """
+    try:
+        valid_token = await token_mgr.verify_token(authorization=authorization)
+        return {"message": "Token is valid", "token": valid_token}
+    except HTTPException as e:
+        raise e
 
-    books = data["data"]["books"]
-    assert len(books) == 2
-    assert books[0] == {"id": 1, "title": "1984", "author": "George Orwell"}
-    assert books[1] == {"id": 2, "title": "Brave New World", "author": "Aldous Huxley"}
+
+
+
+from fastapi import Request, Header
+import jwt
+
+@app.post("/bpan/reporting")
+async def post_graphql_fastapi(
+    request: Request,
+    query: GQLQuery,
+    page: int = 1,
+    authorization: str = Header(None)  # Extract token from headers
+):
+    """
+    GraphQL Reporting API with Token Validation.
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid token")
+
+    token_credentials = HTTPAuthorizationCredentials(scheme="bearer", credentials=authorization.split(" ")[1])
+    
+    # Validate token using existing TokenManager
+    user_token = await token_mgr.verify_token(authorization=token_credentials)
+
+    return await graphql_app.execute_operation(
+        request=request,
+        root_value=None,
+        context={"request": request, "page": page, "query": query, "user_token": user_token}
+    )
+
