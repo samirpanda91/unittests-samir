@@ -1,51 +1,64 @@
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from app.service.token_validation import TokenManager
+import pytest
+import json
+from purl import Purl
 
-router = APIRouter()
-token_mgr = TokenManager()
-security = HTTPBearer()
+@pytest.fixture
+def purl_instance():
+    """Fixture to create a Purl instance for tests."""
+    return Purl("http://example.com", "GET")
 
-@router.post("/auth/validate-token")
-async def validate_token(
-    authorization: HTTPAuthorizationCredentials = Depends(security)
-):
-    """
-    API endpoint for Apigee to validate tokens.
-    """
-    try:
-        valid_token = await token_mgr.verify_token(authorization=authorization)
-        return {"message": "Token is valid", "token": valid_token}
-    except HTTPException as e:
-        raise e
+def test_initialization_valid_request():
+    """Test valid initialization of Purl."""
+    p = Purl("http://example.com", "POST")
+    assert p._url1 == "http://example.com"
+    assert p._request_type == "POST"
 
+def test_initialization_invalid_request():
+    """Test initialization with an invalid request type."""
+    with pytest.raises(Exception, match="Valid Request types are"):
+        Purl("http://example.com", "INVALID")
 
+def test_add_json_header(purl_instance):
+    """Test adding JSON headers."""
+    purl_instance.Add_JSON_header()
+    assert "Content-Type" in purl_instance._headers
+    assert purl_instance._headers["Content-Type"] == "application/json"
 
+def test_init_request_params(purl_instance):
+    """Test initializing request parameters."""
+    purl_instance._initRequestParams()
+    assert "verify" in purl_instance._request_params
+    assert purl_instance._request_params["verify"] is False
 
-from fastapi import Request, Header
-import jwt
+def test_pretty_json(purl_instance):
+    """Test Pretty_JSON method."""
+    assert purl_instance._pretty is False
+    purl_instance.Pretty_JSON(True)
+    assert purl_instance._pretty is True
 
-@app.post("/bpan/reporting")
-async def post_graphql_fastapi(
-    request: Request,
-    query: GQLQuery,
-    page: int = 1,
-    authorization: str = Header(None)  # Extract token from headers
-):
-    """
-    GraphQL Reporting API with Token Validation.
-    """
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid token")
+def test_add_json_post_data(purl_instance):
+    """Test adding JSON post data."""
+    json_data = '{"key": "value"}'
+    purl_instance.Add_JSON_Post_Data(json_data)
+    assert purl_instance._json_post_data == json.loads(json_data)
 
-    token_credentials = HTTPAuthorizationCredentials(scheme="bearer", credentials=authorization.split(" ")[1])
+def test_add_post_data(purl_instance):
+    """Test adding post data as dictionary."""
+    data = {"key": "value"}
+    purl_instance.Add_Post_Data(data)
+    assert purl_instance._json_post_data == data
+
+def test_read_json_post_data_file(mocker, purl_instance):
+    """Test reading JSON data from a file."""
+    mock_data = '{"name": "test"}'
+    mock_open = mocker.patch("builtins.open", mocker.mock_open(read_data=mock_data))
     
-    # Validate token using existing TokenManager
-    user_token = await token_mgr.verify_token(authorization=token_credentials)
+    purl_instance.Read_JSON_Post_Data_File("dummy.json")
+    
+    mock_open.assert_called_once_with("dummy.json")
+    assert purl_instance._json_post_data == json.loads(mock_data)
 
-    return await graphql_app.execute_operation(
-        request=request,
-        root_value=None,
-        context={"request": request, "page": page, "query": query, "user_token": user_token}
-    )
-
+def test_add_user(purl_instance):
+    """Test adding user credentials."""
+    purl_instance.Add_user("admin:password")
+    assert purl_instance._creds == ["admin", "password"]
