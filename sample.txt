@@ -1,5 +1,7 @@
 import pytest
 import json
+import requests
+from unittest.mock import patch, MagicMock
 from purl import Purl
 
 @pytest.fixture
@@ -62,3 +64,90 @@ def test_add_user(purl_instance):
     """Test adding user credentials."""
     purl_instance.Add_user("admin:password")
     assert purl_instance._creds == ["admin", "password"]
+
+def test_add_proxy(purl_instance):
+    """Test adding proxy settings."""
+    purl_instance.Add_proxy("http://proxy.example.com")
+    assert purl_instance._proxies["http"] == "http://proxy.example.com"
+    assert purl_instance._proxies["https"] == "http://proxy.example.com"
+
+def test_key_search(purl_instance):
+    """Test setting key search parameters."""
+    keys = ["key1", "key2"]
+    purl_instance.KeySearch(keys)
+    assert purl_instance._key_search == keys
+
+def test_value_search(purl_instance):
+    """Test setting value search parameters."""
+    values = ["value1", "value2"]
+    purl_instance.ValueSearch(values)
+    assert purl_instance._value_search == values
+
+@patch("requests.get")
+def test_execute_request(mock_get, purl_instance):
+    """Test executing a GET request."""
+    mock_response = MagicMock()
+    mock_response.text = "mock response"
+    mock_get.return_value = mock_response
+    
+    purl_instance._request_type = "GET"
+    result = purl_instance.Execute_request()
+    
+    mock_get.assert_called_once()
+    assert result == "mock response"
+
+@patch("requests.put")
+def test_put_request(mock_put, purl_instance):
+    """Test executing a PUT request."""
+    mock_response = MagicMock()
+    mock_response.text = "put response"
+    mock_put.return_value = mock_response
+    
+    purl_instance._request_type = "PUT"
+    purl_instance._json_post_data = {"key": "value"}
+    result = purl_instance._put()
+    
+    mock_put.assert_called_once()
+    assert result == "put response"
+
+@patch("requests.patch")
+def test_patch_request(mock_patch, purl_instance):
+    """Test executing a PATCH request."""
+    mock_response = MagicMock()
+    mock_response.text = "patch response"
+    mock_patch.return_value = mock_response
+    
+    purl_instance._request_type = "PATCH"
+    purl_instance._json_post_data = {"key": "value"}
+    result = purl_instance._patch()
+    
+    mock_patch.assert_called_once()
+    assert result == "patch response"
+
+@patch("requests.delete")
+def test_delete_request(mock_delete, purl_instance):
+    """Test executing a DELETE request."""
+    mock_response = MagicMock()
+    mock_response.text = "delete response"
+    mock_delete.return_value = mock_response
+    
+    purl_instance._request_type = "DELETE"
+    purl_instance._json_post_data = {"key": "value"}
+    result = purl_instance._delete()
+    
+    mock_delete.assert_called_once()
+    assert result == "delete response"
+
+@patch("requests.post")
+def test_post_request(mock_post, purl_instance):
+    """Test executing a POST request."""
+    mock_response = MagicMock()
+    mock_response.text = "post response"
+    mock_post.return_value = mock_response
+    
+    purl_instance._request_type = "POST"
+    purl_instance._json_post_data = {"key": "value"}
+    result = purl_instance._post()
+    
+    mock_post.assert_called_once()
+    assert result == "post response"
