@@ -1,153 +1,87 @@
-import pytest
-import json
 import requests
-from unittest.mock import patch, MagicMock
-from purl import Purl
+import logging
+from requests.packages import urllib3
 
-@pytest.fixture
-def purl_instance():
-    """Fixture to create a Purl instance for tests."""
-    return Purl("http://example.com", "GET")
+# Disable insecure request warnings
+urllib3.disable_warnings(category=urllib3.exceptions.InsecureRequestWarning)
 
-def test_initialization_valid_request():
-    """Test valid initialization of Purl."""
-    p = Purl("http://example.com", "POST")
-    assert p._url1 == "http://example.com"
-    assert p._request_type == "POST"
+# Configure logging
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(message)s", 
+    level=logging.INFO
+)
 
-def test_initialization_invalid_request():
-    """Test initialization with an invalid request type."""
-    with pytest.raises(Exception, match="Valid Request types are"):
-        Purl("http://example.com", "INVALID")
+# Constants
+URL = "https://test.test.com:8500/test"
+TOKEN = "<Replace with your token>"
+QUERY = """
+    getIncidents(filters: {incnumber: "not null", incidentStartTime: ["2025-01-01 00:00:00", "2025-12-31 23:59:59"]}) {
+        incidents {
+            id
+            name
+            status
+        }
+        pageInfo {
+            hasNextPage
+            nextPage
+        }
+    }
+"""
 
-def test_add_json_header(purl_instance):
-    """Test adding JSON headers."""
-    purl_instance.Add_JSON_header()
-    assert "Content-Type" in purl_instance._headers
-    assert purl_instance._headers["Content-Type"] == "application/json"
+# Headers and payload
+HEADERS = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {TOKEN}",
+}
 
-def test_init_request_params(purl_instance):
-    """Test initializing request parameters."""
-    purl_instance._initRequestParams()
-    assert "verify" in purl_instance._request_params
-    assert purl_instance._request_params["verify"] is False
+PAYLOAD = {"query": QUERY}
+PARAMS = {"page": 1}
 
-def test_pretty_json(purl_instance):
-    """Test Pretty_JSON method."""
-    assert purl_instance._pretty is False
-    purl_instance.Pretty_JSON(True)
-    assert purl_instance._pretty is True
+def get_all_incidents(url: str, params: dict, headers: dict, payload: dict) -> dict:
+    """
+    Fetch all incidents from the API with pagination.
 
-def test_add_json_post_data(purl_instance):
-    """Test adding JSON post data."""
-    json_data = '{"key": "value"}'
-    purl_instance.Add_JSON_Post_Data(json_data)
-    assert purl_instance._json_post_data == json.loads(json_data)
+    :param url: API endpoint
+    :param params: Query parameters
+    :param headers: Request headers
+    :param payload: JSON payload containing the GraphQL query
+    :return: Dictionary of all incidents
+    """
+    current_page = 1
+    all_incidents = {"getIncidents": {"incidents": []}}
 
-def test_add_post_data(purl_instance):
-    """Test adding post data as dictionary."""
-    data = {"key": "value"}
-    purl_instance.Add_Post_Data(data)
-    assert purl_instance._json_post_data == data
+    while True:
+        try:
+            params["page"] = current_page
+            response = requests.post(url, params=params, headers=headers, json=payload, verify=False)
 
-def test_read_json_post_data_file(mocker, purl_instance):
-    """Test reading JSON data from a file."""
-    mock_data = '{"name": "test"}'
-    mock_open = mocker.patch("builtins.open", mocker.mock_open(read_data=mock_data))
-    
-    purl_instance.Read_JSON_Post_Data_File("dummy.json")
-    
-    mock_open.assert_called_once_with("dummy.json")
-    assert purl_instance._json_post_data == json.loads(mock_data)
+            # Check for successful response
+            response.raise_for_status()
+            result = response.json()
 
-def test_add_user(purl_instance):
-    """Test adding user credentials."""
-    purl_instance.Add_user("admin:password")
-    assert purl_instance._creds == ["admin", "password"]
+            # Extract data
+            data = result.get("data", {}).get("getIncidents", {})
+            incidents = data.get("incidents", [])
+            page_info = data.get("pageInfo", {})
 
-def test_add_proxy(purl_instance):
-    """Test adding proxy settings."""
-    purl_instance.Add_proxy("http://proxy.example.com")
-    assert purl_instance._proxies["http"] == "http://proxy.example.com"
-    assert purl_instance._proxies["https"] == "http://proxy.example.com"
+            logging.info(f"Processing Page: {current_page}, Incidents Retrieved: {len(incidents)}")
 
-def test_key_search(purl_instance):
-    """Test setting key search parameters."""
-    keys = ["key1", "key2"]
-    purl_instance.KeySearch(keys)
-    assert purl_instance._key_search == keys
+            if incidents:
+                all_incidents["getIncidents"]["incidents"].extend(incidents)
 
-def test_value_search(purl_instance):
-    """Test setting value search parameters."""
-    values = ["value1", "value2"]
-    purl_instance.ValueSearch(values)
-    assert purl_instance._value_search == values
+            # Check if there's a next page
+            if page_info.get("hasNextPage"):
+                current_page = page_info.get("nextPage")
+            else:
+                break
 
-@patch("requests.get")
-def test_execute_request(mock_get, purl_instance):
-    """Test executing a GET request."""
-    mock_response = MagicMock()
-    mock_response.text = "mock response"
-    mock_get.return_value = mock_response
-    
-    purl_instance._request_type = "GET"
-    result = purl_instance.Execute_request()
-    
-    mock_get.assert_called_once()
-    assert result == "mock response"
+        except requests.RequestException as e:
+            logging.error(f"Error fetching incidents: {e}")
+            break
 
-@patch("requests.put")
-def test_put_request(mock_put, purl_instance):
-    """Test executing a PUT request."""
-    mock_response = MagicMock()
-    mock_response.text = "put response"
-    mock_put.return_value = mock_response
-    
-    purl_instance._request_type = "PUT"
-    purl_instance._json_post_data = {"key": "value"}
-    result = purl_instance._put()
-    
-    mock_put.assert_called_once()
-    assert result == "put response"
+    return all_incidents
 
-@patch("requests.patch")
-def test_patch_request(mock_patch, purl_instance):
-    """Test executing a PATCH request."""
-    mock_response = MagicMock()
-    mock_response.text = "patch response"
-    mock_patch.return_value = mock_response
-    
-    purl_instance._request_type = "PATCH"
-    purl_instance._json_post_data = {"key": "value"}
-    result = purl_instance._patch()
-    
-    mock_patch.assert_called_once()
-    assert result == "patch response"
 
-@patch("requests.delete")
-def test_delete_request(mock_delete, purl_instance):
-    """Test executing a DELETE request."""
-    mock_response = MagicMock()
-    mock_response.text = "delete response"
-    mock_delete.return_value = mock_response
-    
-    purl_instance._request_type = "DELETE"
-    purl_instance._json_post_data = {"key": "value"}
-    result = purl_instance._delete()
-    
-    mock_delete.assert_called_once()
-    assert result == "delete response"
-
-@patch("requests.post")
-def test_post_request(mock_post, purl_instance):
-    """Test executing a POST request."""
-    mock_response = MagicMock()
-    mock_response.text = "post response"
-    mock_post.return_value = mock_response
-    
-    purl_instance._request_type = "POST"
-    purl_instance._json_post_data = {"key": "value"}
-    result = purl_instance._post()
-    
-    mock_post.assert_called_once()
-    assert result == "post response"
+if __name__ == "__main__":
+    all_incidents_data = get_all_incidents(URL, PARAMS, HEADERS, PAYLOAD)
+    print(all_incidents_data)
