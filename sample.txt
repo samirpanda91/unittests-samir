@@ -1,87 +1,14 @@
-import requests
-import logging
-from requests.packages import urllib3
-
-# Disable insecure request warnings
-urllib3.disable_warnings(category=urllib3.exceptions.InsecureRequestWarning)
-
-# Configure logging
-logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(message)s", 
-    level=logging.INFO
-)
-
-# Constants
-URL = "https://test.test.com:8500/test"
-TOKEN = "<Replace with your token>"
-QUERY = """
-    getIncidents(filters: {incnumber: "not null", incidentStartTime: ["2025-01-01 00:00:00", "2025-12-31 23:59:59"]}) {
-        incidents {
-            id
-            name
-            status
-        }
-        pageInfo {
-            hasNextPage
-            nextPage
+pipeline {
+    agent any
+    stages {
+        stage('Get Release Version') {
+            steps {
+                script {
+                    def releaseDate = sh(script: 'date +%Y%m%d', returnStdout: true).trim()
+                    env.RELEASE_VERSION = "1.0.${releaseDate}"
+                    echo "Release Version: ${env.RELEASE_VERSION}"
+                }
+            }
         }
     }
-"""
-
-# Headers and payload
-HEADERS = {
-    "Content-Type": "application/json",
-    "Authorization": f"Bearer {TOKEN}",
 }
-
-PAYLOAD = {"query": QUERY}
-PARAMS = {"page": 1}
-
-def get_all_incidents(url: str, params: dict, headers: dict, payload: dict) -> dict:
-    """
-    Fetch all incidents from the API with pagination.
-
-    :param url: API endpoint
-    :param params: Query parameters
-    :param headers: Request headers
-    :param payload: JSON payload containing the GraphQL query
-    :return: Dictionary of all incidents
-    """
-    current_page = 1
-    all_incidents = {"getIncidents": {"incidents": []}}
-
-    while True:
-        try:
-            params["page"] = current_page
-            response = requests.post(url, params=params, headers=headers, json=payload, verify=False)
-
-            # Check for successful response
-            response.raise_for_status()
-            result = response.json()
-
-            # Extract data
-            data = result.get("data", {}).get("getIncidents", {})
-            incidents = data.get("incidents", [])
-            page_info = data.get("pageInfo", {})
-
-            logging.info(f"Processing Page: {current_page}, Incidents Retrieved: {len(incidents)}")
-
-            if incidents:
-                all_incidents["getIncidents"]["incidents"].extend(incidents)
-
-            # Check if there's a next page
-            if page_info.get("hasNextPage"):
-                current_page = page_info.get("nextPage")
-            else:
-                break
-
-        except requests.RequestException as e:
-            logging.error(f"Error fetching incidents: {e}")
-            break
-
-    return all_incidents
-
-
-if __name__ == "__main__":
-    all_incidents_data = get_all_incidents(URL, PARAMS, HEADERS, PAYLOAD)
-    print(all_incidents_data)
