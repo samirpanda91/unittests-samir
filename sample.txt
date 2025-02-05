@@ -1,14 +1,78 @@
-pipeline {
-    agent any
-    stages {
-        stage('Get Release Version') {
-            steps {
-                script {
-                    def releaseDate = sh(script: 'date +%Y%m%d', returnStdout: true).trim()
-                    env.RELEASE_VERSION = "1.0.${releaseDate}"
-                    echo "Release Version: ${env.RELEASE_VERSION}"
-                }
-            }
-        }
-    }
-}
+Here’s a structured comparison of REST API vs GraphQL covering all key features, pros, and cons:
+
+1. Overview
+
+REST API
+	•	A widely used architectural style for web services.
+	•	Uses standard HTTP methods (GET, POST, PUT, DELETE).
+	•	Data is typically exchanged in JSON or XML.
+
+GraphQL
+	•	A query language and runtime for APIs, developed by Facebook.
+	•	Clients specify exactly what data they need.
+	•	Uses a single endpoint for all queries and mutations.
+
+2. Key Features
+
+Feature	REST API	GraphQL
+Endpoint Structure	Multiple endpoints for different resources	Single endpoint for all queries/mutations
+Data Fetching	Fixed responses per endpoint (over-fetching/under-fetching)	Clients request only needed fields (optimized fetching)
+Type System	No strict type system	Strongly typed schema
+Batch Requests	Requires multiple calls	Supports batching within a single request
+Performance	Can be slow due to multiple round trips	More efficient, but complex queries can be expensive
+Caching	Built-in HTTP caching (ETag, 304 Not Modified)	Requires custom caching mechanisms
+Real-Time Updates	Uses WebSockets, Server-Sent Events, or polling	Built-in support for real-time subscriptions
+Versioning	Versioned APIs (e.g., /v1/users)	No versioning needed; schema evolves over time
+Security	Standard authentication (OAuth2, JWT, API keys)	More complex security concerns due to flexible queries
+Tooling	Mature ecosystem with Swagger, Postman, etc.	GraphiQL, Apollo, and other GraphQL-specific tools
+
+3. Pros & Cons
+
+REST API
+
+✅ Pros:
+
+✔ Simple, widely adopted, and easy to implement.
+✔ Built-in HTTP caching for better performance.
+✔ Works well with existing web standards.
+✔ Mature security practices and extensive tooling.
+
+❌ Cons:
+
+✖ Over-fetching (receiving more data than needed).
+✖ Under-fetching (requiring multiple requests to get related data).
+✖ Requires multiple endpoints for different resources.
+✖ More difficult to evolve without breaking changes.
+
+GraphQL
+
+✅ Pros:
+
+✔ Flexible queries—fetch only what you need.
+✔ Single endpoint simplifies API structure.
+✔ Strongly typed schema for better developer experience.
+✔ Real-time subscriptions for live updates.
+
+❌ Cons:
+
+✖ Complex queries can impact performance.
+✖ No built-in caching like REST (requires custom caching).
+✖ More complex security (potential for deep query abuse).
+✖ Learning curve for teams new to GraphQL.
+
+4. When to Use REST vs GraphQL
+
+Use Case	REST API	GraphQL
+Simple CRUD operations	✅ Yes	❌ No need for GraphQL overhead
+Microservices architecture	✅ Yes	❌ REST is better for loosely coupled services
+Optimized data fetching	❌ No	✅ Yes
+Real-time applications	❌ Requires WebSockets	✅ Built-in subscriptions
+Mobile applications	❌ REST may over-fetch data	✅ GraphQL reduces payload size
+Strong API versioning needed	✅ REST handles versioning well	❌ No versioning, requires careful schema management
+
+5. Conclusion
+	•	Use REST for simpler applications, microservices, and when HTTP caching/versioning is important.
+	•	Use GraphQL when you need flexible data fetching, efficient mobile performance, or real-time updates.
+	•	Hybrid Approach: Some companies use REST for basic CRUD and GraphQL for complex queries (e.g., GitHub, Shopify).
+
+Would you like a more detailed comparison on any specific aspect?
