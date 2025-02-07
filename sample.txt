@@ -22,6 +22,11 @@ const App = () => {
       });
       console.log("API Response:", response.data); // Debug the response
       setIncidents(Array.isArray(response.data) ? response.data : []); // Ensure incidents is an array
+
+      // Automatically select the first incident in the dropdown
+      if (Array.isArray(response.data) && response.data.length > 0) {
+        setSelectedIncident(response.data[0].id.toString());
+      }
     } catch (error) {
       console.error("Error fetching incidents:", error);
       setIncidents([]); // Set incidents to an empty array on error
@@ -84,7 +89,7 @@ const App = () => {
                 variant="contained"
                 color="secondary"
                 onClick={fetchIncidents}
-                sx={{ fontWeight: "bold", width: "80%", height: 40 }} // Increased width of button
+                sx={{ fontWeight: "bold", width: "100%", height: 40 }} // Set width to 100%
               >
                 Get Incidents
               </Button>
@@ -103,13 +108,14 @@ const App = () => {
                     backgroundColor: "white", 
                     borderRadius: 1,
                     "& .MuiInputBase-root": { height: 40 }, // Reduce height of dropdown
-                    width: "100%", // Make dropdown wider
+                    width: "400px", // Fixed width for dropdown
                   }}
                   MenuProps={{
                     PaperProps: {
                       sx: {
                         maxHeight: 200, // Add scrollbar after 200px height
                         marginTop: 1, // Start dropdown just below the label
+                        width: "400px", // Match dropdown width
                       },
                     },
                   }}
