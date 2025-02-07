@@ -7,8 +7,9 @@ import Grid2 from "@mui/material/Unstable_Grid2"; // Import Grid2
 import api from "./api"; // Import Axios instance
 
 const App = () => {
-  const [alertThreshold, setAlertThreshold] = useState("");
-  const [nRecords, setNRecords] = useState("");
+  // Initialize with default values
+  const [alertThreshold, setAlertThreshold] = useState("10");
+  const [nRecords, setNRecords] = useState("20");
   const [incidents, setIncidents] = useState([]);
   const [selectedIncident, setSelectedIncident] = useState("");
   const [alertDescriptions, setAlertDescriptions] = useState([]);
@@ -46,95 +47,92 @@ const App = () => {
 
       <Card sx={{ boxShadow: 5, borderRadius: 3, backgroundColor: "#f4f6f8", p: 3 }}>
         <CardContent>
-          <Grid2 container spacing={4}>
-            {/* Left Side: Query Parameters, Get Incidents Button, and Dropdown */}
+          {/* Input Fields and Get Incidents Button */}
+          <Grid2 container spacing={2} justifyContent="center">
             <Grid2 xs={6}>
-              <Grid2 container spacing={2}>
-                <Grid2 xs={6}>
-                  <TextField
-                    label="alert_threshold"
-                    fullWidth
-                    variant="outlined"
-                    value={alertThreshold}
-                    onChange={(e) => setAlertThreshold(e.target.value)}
-                    sx={{ backgroundColor: "white", borderRadius: 1 }}
-                  />
-                </Grid2>
-                <Grid2 xs={6}>
-                  <TextField
-                    label="n_records"
-                    fullWidth
-                    variant="outlined"
-                    value={nRecords}
-                    onChange={(e) => setNRecords(e.target.value)}
-                    sx={{ backgroundColor: "white", borderRadius: 1 }}
-                  />
-                </Grid2>
-                <Grid2 xs={8}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    color="secondary"
-                    onClick={fetchIncidents}
-                    sx={{ height: "100%", fontWeight: "bold" }}
-                  >
-                    Get Incidents
-                  </Button>
-                </Grid2>
-                <Grid2 xs={4}>
-                  <FormControl fullWidth>
-                    <InputLabel>DD Incidents</InputLabel>
-                    <Select
-                      value={selectedIncident || ""} // Fallback to empty string if undefined
-                      onChange={(e) => setSelectedIncident(e.target.value.toString())} // Ensure value is a string
-                      sx={{ backgroundColor: "white", borderRadius: 1, width: "300px" }} // Fixed width
-                    >
-                      {Array.isArray(incidents) && incidents.map((incident) => (
-                        <MenuItem key={incident.id} value={incident.id ? incident.id.toString() : ""}>
-                          {`Incident ${incident.id} - ${incident.n_alerts} alerts`}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid2>
-              </Grid2>
+              <TextField
+                label="alert_threshold"
+                fullWidth
+                variant="outlined"
+                value={alertThreshold}
+                onChange={(e) => setAlertThreshold(e.target.value)}
+                sx={{ backgroundColor: "white", borderRadius: 1, mb: 2 }}
+              />
             </Grid2>
-
-            {/* Right Side: Summarize Button and Incident Details */}
             <Grid2 xs={6}>
-              <Grid2 container spacing={2} justifyContent="center">
-                {selectedIncident && ( // Show Summarize button only if an incident is selected
-                  <Grid2 xs={12} sx={{ textAlign: "center" }}>
-                    <Button
-                      variant="contained"
-                      color="success"
-                      onClick={summarizeIncident}
-                      sx={{ height: "100%", fontWeight: "bold", width: "50%" }}
-                    >
-                      Summarize
-                    </Button>
-                  </Grid2>
-                )}
-                <Grid2 xs={12}>
-                  <Box mt={3} p={2} sx={{ backgroundColor: "#e3f2fd", borderRadius: 2 }}>
-                    <Typography variant="h6" fontWeight="bold" color="primary">
-                      Incident Details
-                    </Typography>
-                    {alertDescriptions.length > 0 ? (
-                      alertDescriptions.map((alert, index) => (
-                        <Typography key={index} sx={{ mt: 1, fontSize: "1rem" }}>
-                          <strong>ID:</strong> {alert.id} | <strong>Identifier:</strong> {alert.identifier} <br />
-                          <strong>Description:</strong> {alert.description}
-                        </Typography>
-                      ))
-                    ) : (
-                      <Typography sx={{ mt: 1, fontStyle: "italic" }}>No details available</Typography>
-                    )}
-                  </Box>
-                </Grid2>
-              </Grid2>
+              <TextField
+                label="n_records"
+                fullWidth
+                variant="outlined"
+                value={nRecords}
+                onChange={(e) => setNRecords(e.target.value)}
+                sx={{ backgroundColor: "white", borderRadius: 1, mb: 2 }}
+              />
+            </Grid2>
+            <Grid2 xs={12} sx={{ textAlign: "center" }}>
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={fetchIncidents}
+                sx={{ fontWeight: "bold", width: "50%" }}
+              >
+                Get Incidents
+              </Button>
             </Grid2>
           </Grid2>
+
+          {/* Dropdown for Incidents */}
+          <Grid2 container spacing={2} justifyContent="center" sx={{ mt: 2 }}>
+            <Grid2 xs={8}>
+              <FormControl fullWidth>
+                <InputLabel>DD Incidents</InputLabel>
+                <Select
+                  value={selectedIncident || ""} // Fallback to empty string if undefined
+                  onChange={(e) => setSelectedIncident(e.target.value.toString())} // Ensure value is a string
+                  sx={{ backgroundColor: "white", borderRadius: 1 }}
+                >
+                  {Array.isArray(incidents) && incidents.map((incident) => (
+                    <MenuItem key={incident.id} value={incident.id ? incident.id.toString() : ""}>
+                      {`Incident ${incident.id} - ${incident.n_alerts} alerts`}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid2>
+          </Grid2>
+
+          {/* Summarize Button (Conditional) */}
+          {selectedIncident && (
+            <Grid2 container spacing={2} justifyContent="center" sx={{ mt: 2 }}>
+              <Grid2 xs={8} sx={{ textAlign: "center" }}>
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={summarizeIncident}
+                  sx={{ fontWeight: "bold", width: "50%" }}
+                >
+                  Summarize
+                </Button>
+              </Grid2>
+            </Grid2>
+          )}
+
+          {/* Incident Details Section */}
+          <Box mt={3} p={2} sx={{ backgroundColor: "#e3f2fd", borderRadius: 2 }}>
+            <Typography variant="h6" fontWeight="bold" color="primary">
+              Incident Details
+            </Typography>
+            {alertDescriptions.length > 0 ? (
+              alertDescriptions.map((alert, index) => (
+                <Typography key={index} sx={{ mt: 1, fontSize: "1rem" }}>
+                  <strong>ID:</strong> {alert.id} | <strong>Identifier:</strong> {alert.identifier} <br />
+                  <strong>Description:</strong> {alert.description}
+                </Typography>
+              ))
+            ) : (
+              <Typography sx={{ mt: 1, fontStyle: "italic" }}>No details available</Typography>
+            )}
+          </Box>
         </CardContent>
       </Card>
     </Container>
