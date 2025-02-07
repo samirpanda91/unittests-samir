@@ -1,24 +1,133 @@
-Here is a clear and structured explanation of the testing executed and the results:
+import React, { useState } from "react";
+import {
+  Container, TextField, Button, MenuItem, Select, FormControl, InputLabel,
+  Typography, Card, CardContent, Grid, Box
+} from "@mui/material";
+import axios from "axios";
 
-Summary of Testing Executed
-	1.	Deployment of Release Branch
-	•	The latest release branch was successfully deployed on the UAT server, ensuring that the most recent changes were available for testing.
-	2.	Microservices Startup
-	•	The ingest, upload, and reporting API microservices were started and confirmed to be running without any issues. These services are essential for handling data ingestion, file uploads, and reporting functionalities.
-	3.	File Download Verification
-	•	Logs were checked to confirm that files were being downloaded as expected, ensuring that the ingestion process was working correctly.
-	4.	ETL Processing Validation
-	•	The ETL process was monitored to verify that it correctly processed the downloaded files and updated the status in the database.
-	5.	Database Verification
-	•	The database was checked to ensure that the ETL process had correctly stored and updated the expected information. This step validated that the data pipeline was functioning as intended.
-	6.	GraphQL Query Execution
-	•	GraphQL queries were executed in the UI to retrieve data, confirming that the data was accessible through the API and displayed correctly in the application.
+const App = () => {
+  const [nAlerts, setNAlerts] = useState("");
+  const [nIncidents, setNIncidents] = useState("");
+  const [incidents, setIncidents] = useState([]);
+  const [selectedIncident, setSelectedIncident] = useState("");
+  const [alertDescriptions, setAlertDescriptions] = useState([]);
 
-Summary of Results
-	•	The deployment and microservices started successfully without errors.
-	•	File downloads were confirmed through logs, indicating that the ingestion pipeline was working.
-	•	The ETL process correctly processed the files and updated the database as expected.
-	•	The database contained the expected ETL information, validating data consistency.
-	•	GraphQL queries successfully fetched data in the UI, confirming that the API was working as expected.
+  // Fetch incidents from API
+  const fetchIncidents = async () => {
+    try {
+      const response = await axios.get("/v1/incidents", {
+        params: { n_alerts: nAlerts, n_incidents: nIncidents }
+      });
+      setIncidents(response.data);
+    } catch (error) {
+      console.error("Error fetching incidents:", error);
+    }
+  };
 
-Overall, the tests confirmed that the system was functioning correctly, with no major issues identified.
+  // Fetch incident details
+  const summarizeIncident = async () => {
+    if (!selectedIncident) return;
+    try {
+      const response = await axios.get(`/v1/incidents/${selectedIncident}/description`);
+      setAlertDescriptions(response.data);
+    } catch (error) {
+      console.error("Error fetching incident description:", error);
+    }
+  };
+
+  return (
+    <Container maxWidth="md" sx={{ mt: 5 }}>
+      <Typography variant="h4" textAlign="center" fontWeight="bold" color="primary" gutterBottom>
+        Advanced Incident Summarization
+      </Typography>
+
+      <Card sx={{ boxShadow: 5, borderRadius: 3, backgroundColor: "#f4f6f8", p: 3 }}>
+        <CardContent>
+          <Grid container spacing={2}>
+            {/* Query Parameters */}
+            <Grid item xs={3}>
+              <TextField
+                label="n_alerts"
+                fullWidth
+                variant="outlined"
+                value={nAlerts}
+                onChange={(e) => setNAlerts(e.target.value)}
+                sx={{ backgroundColor: "white", borderRadius: 1 }}
+              />
+            </Grid>
+            <Grid item xs={3}>
+              <TextField
+                label="n_incidents"
+                fullWidth
+                variant="outlined"
+                value={nIncidents}
+                onChange={(e) => setNIncidents(e.target.value)}
+                sx={{ backgroundColor: "white", borderRadius: 1 }}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <Button
+                fullWidth
+                variant="contained"
+                color="secondary"
+                onClick={fetchIncidents}
+                sx={{ height: "100%", fontWeight: "bold" }}
+              >
+                Get Incidents
+              </Button>
+            </Grid>
+
+            {/* Incident Dropdown */}
+            <Grid item xs={8}>
+              <FormControl fullWidth>
+                <InputLabel>DD Incidents</InputLabel>
+                <Select
+                  value={selectedIncident}
+                  onChange={(e) => setSelectedIncident(e.target.value)}
+                  sx={{ backgroundColor: "white", borderRadius: 1 }}
+                >
+                  {incidents.map((incident) => (
+                    <MenuItem key={incident.incident_id} value={incident.incident_id}>
+                      {`Incident ${incident.incident_id} - ${incident.n_alerts} alerts`}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={4}>
+              <Button
+                fullWidth
+                variant="contained"
+                color="success"
+                onClick={summarizeIncident}
+                sx={{ height: "100%", fontWeight: "bold" }}
+              >
+                Summarize >
+              </Button>
+            </Grid>
+          </Grid>
+
+          {/* Incident Details Section */}
+          <Box mt={3} p={2} sx={{ backgroundColor: "#e3f2fd", borderRadius: 2 }}>
+            <Typography variant="h6" fontWeight="bold" color="primary">
+              Incident Details
+            </Typography>
+            {alertDescriptions.length > 0 ? (
+              alertDescriptions.map((alert, index) => (
+                <Typography key={index} sx={{ mt: 1, fontSize: "1rem" }}>
+                  <strong>ID:</strong> {alert.id} | <strong>Identifier:</strong> {alert.identifier} <br />
+                  <strong>Description:</strong> {alert.description}
+                </Typography>
+              ))
+            ) : (
+              <Typography sx={{ mt: 1, fontStyle: "italic" }}>No details available</Typography>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
+    </Container>
+  );
+};
+
+export default App;
