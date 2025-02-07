@@ -1,13 +1,24 @@
-#!/bin/bash
+Here is a clear and structured explanation of the testing executed and the results:
 
-# Replace with your script name or part of the command that starts it
-PROCESS_NAME="your_python_script.py"
+Summary of Testing Executed
+	1.	Deployment of Release Branch
+	•	The latest release branch was successfully deployed on the UAT server, ensuring that the most recent changes were available for testing.
+	2.	Microservices Startup
+	•	The ingest, upload, and reporting API microservices were started and confirmed to be running without any issues. These services are essential for handling data ingestion, file uploads, and reporting functionalities.
+	3.	File Download Verification
+	•	Logs were checked to confirm that files were being downloaded as expected, ensuring that the ingestion process was working correctly.
+	4.	ETL Processing Validation
+	•	The ETL process was monitored to verify that it correctly processed the downloaded files and updated the status in the database.
+	5.	Database Verification
+	•	The database was checked to ensure that the ETL process had correctly stored and updated the expected information. This step validated that the data pipeline was functioning as intended.
+	6.	GraphQL Query Execution
+	•	GraphQL queries were executed in the UI to retrieve data, confirming that the data was accessible through the API and displayed correctly in the application.
 
-# Count the number of running processes
-PROCESS_COUNT=$(pgrep -f "$PROCESS_NAME" | wc -l)
+Summary of Results
+	•	The deployment and microservices started successfully without errors.
+	•	File downloads were confirmed through logs, indicating that the ingestion pipeline was working.
+	•	The ETL process correctly processed the files and updated the database as expected.
+	•	The database contained the expected ETL information, validating data consistency.
+	•	GraphQL queries successfully fetched data in the UI, confirming that the API was working as expected.
 
-if [ "$PROCESS_COUNT" -gt 0 ]; then
-  echo "There are $PROCESS_COUNT instances of $PROCESS_NAME running."
-else
-  echo "No processes found for $PROCESS_NAME."
-fi
+Overall, the tests confirmed that the system was functioning correctly, with no major issues identified.
