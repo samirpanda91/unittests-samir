@@ -3,7 +3,7 @@ import {
   Container, TextField, Button, MenuItem, Select, FormControl, InputLabel,
   Typography, Card, CardContent, Grid, Box
 } from "@mui/material";
-import axios from "axios";
+import api from "./api"; // Import Axios instance
 
 const App = () => {
   const [nAlerts, setNAlerts] = useState("");
@@ -15,7 +15,7 @@ const App = () => {
   // Fetch incidents from API
   const fetchIncidents = async () => {
     try {
-      const response = await axios.get("/v1/incidents", {
+      const response = await api.get("/v1/incidents", {
         params: { n_alerts: nAlerts, n_incidents: nIncidents }
       });
       setIncidents(response.data);
@@ -28,7 +28,7 @@ const App = () => {
   const summarizeIncident = async () => {
     if (!selectedIncident) return;
     try {
-      const response = await axios.get(`/v1/incidents/${selectedIncident}/description`);
+      const response = await api.get(`/v1/incidents/${selectedIncident}/description`);
       setAlertDescriptions(response.data);
     } catch (error) {
       console.error("Error fetching incident description:", error);
