@@ -56,7 +56,12 @@ const App = () => {
                 variant="outlined"
                 value={alertThreshold}
                 onChange={(e) => setAlertThreshold(e.target.value)}
-                sx={{ backgroundColor: "white", borderRadius: 1, mb: 2 }}
+                sx={{ 
+                  backgroundColor: "white", 
+                  borderRadius: 1, 
+                  mb: 2,
+                  "& .MuiInputBase-root": { height: 40 } // Reduce height of text field
+                }}
               />
             </Grid2>
             <Grid2 xs={6}>
@@ -66,7 +71,12 @@ const App = () => {
                 variant="outlined"
                 value={nRecords}
                 onChange={(e) => setNRecords(e.target.value)}
-                sx={{ backgroundColor: "white", borderRadius: 1, mb: 2 }}
+                sx={{ 
+                  backgroundColor: "white", 
+                  borderRadius: 1, 
+                  mb: 2,
+                  "& .MuiInputBase-root": { height: 40 } // Reduce height of text field
+                }}
               />
             </Grid2>
             <Grid2 xs={12} sx={{ textAlign: "center" }}>
@@ -74,7 +84,7 @@ const App = () => {
                 variant="contained"
                 color="secondary"
                 onClick={fetchIncidents}
-                sx={{ fontWeight: "bold", width: "50%" }}
+                sx={{ fontWeight: "bold", width: "50%", height: 40 }} // Set height of button
               >
                 Get Incidents
               </Button>
@@ -89,7 +99,12 @@ const App = () => {
                 <Select
                   value={selectedIncident || ""} // Fallback to empty string if undefined
                   onChange={(e) => setSelectedIncident(e.target.value.toString())} // Ensure value is a string
-                  sx={{ backgroundColor: "white", borderRadius: 1 }}
+                  sx={{ 
+                    backgroundColor: "white", 
+                    borderRadius: 1,
+                    "& .MuiInputBase-root": { height: 40 }, // Reduce height of dropdown
+                    width: "100%" // Make dropdown wider
+                  }}
                 >
                   {Array.isArray(incidents) && incidents.map((incident) => (
                     <MenuItem key={incident.id} value={incident.id ? incident.id.toString() : ""}>
@@ -109,7 +124,7 @@ const App = () => {
                   variant="contained"
                   color="success"
                   onClick={summarizeIncident}
-                  sx={{ fontWeight: "bold", width: "50%" }}
+                  sx={{ fontWeight: "bold", width: "100%", height: 40 }} // Increase width and set height of button
                 >
                   Summarize
                 </Button>
