@@ -84,7 +84,7 @@ const App = () => {
                 variant="contained"
                 color="secondary"
                 onClick={fetchIncidents}
-                sx={{ fontWeight: "bold", width: "50%", height: 40 }} // Set height of button
+                sx={{ fontWeight: "bold", width: "80%", height: 40 }} // Increased width of button
               >
                 Get Incidents
               </Button>
@@ -103,7 +103,15 @@ const App = () => {
                     backgroundColor: "white", 
                     borderRadius: 1,
                     "& .MuiInputBase-root": { height: 40 }, // Reduce height of dropdown
-                    width: "100%" // Make dropdown wider
+                    width: "100%", // Make dropdown wider
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        maxHeight: 200, // Add scrollbar after 200px height
+                        marginTop: 1, // Start dropdown just below the label
+                      },
+                    },
                   }}
                 >
                   {Array.isArray(incidents) && incidents.map((incident) => (
