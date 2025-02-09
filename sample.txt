@@ -1,198 +1,41 @@
-import React, { useState } from "react";
-import {
-  Container, TextField, Button, MenuItem, Select, FormControl, InputLabel,
-  Typography, Card, CardContent, Box
-} from "@mui/material";
-import Grid2 from "@mui/material/Unstable_Grid2"; // Import Grid2
-import api from "./api"; // Import Axios instance
+import snowflake.connector
 
-const App = () => {
-  // Initialize with default values
-  const [alertThreshold, setAlertThreshold] = useState("10");
-  const [nRecords, setNRecords] = useState("20");
-  const [incidents, setIncidents] = useState([]);
-  const [selectedIncident, setSelectedIncident] = useState("");
-  const [alertDescriptions, setAlertDescriptions] = useState([]);
+# Snowflake connection parameters
+SNOWFLAKE_ACCOUNT = "<your_account>"  # e.g., "yourcompany-region"
+SNOWFLAKE_USER = "<your_username>"
+SNOWFLAKE_PASSWORD = "<your_password>"
+SNOWFLAKE_DATABASE = "<your_database>"
+SNOWFLAKE_SCHEMA = "<your_schema>"
+SNOWFLAKE_WAREHOUSE = "<your_warehouse>"
+SNOWFLAKE_ROLE = "<your_role>"  # Optional
 
-  // Fetch incidents from API
-  const fetchIncidents = async () => {
-    try {
-      const response = await api.get("/ais/v1/incidents", {
-        params: { alert_threshold: alertThreshold, n_records: nRecords }
-      });
-      console.log("API Response:", response.data); // Debug the response
-      setIncidents(Array.isArray(response.data) ? response.data : []); // Ensure incidents is an array
+# Establish a connection
+conn = snowflake.connector.connect(
+    user=SNOWFLAKE_USER,
+    password=SNOWFLAKE_PASSWORD,
+    account=SNOWFLAKE_ACCOUNT,
+    database=SNOWFLAKE_DATABASE,
+    schema=SNOWFLAKE_SCHEMA,
+    warehouse=SNOWFLAKE_WAREHOUSE,
+    role=SNOWFLAKE_ROLE  # Optional
+)
 
-      // Automatically select the first incident in the dropdown
-      if (Array.isArray(response.data) && response.data.length > 0) {
-        setSelectedIncident(response.data[0].id.toString());
-      }
-    } catch (error) {
-      console.error("Error fetching incidents:", error);
-      setIncidents([]); // Set incidents to an empty array on error
-    }
-  };
+# Create a cursor object
+cur = conn.cursor()
 
-  // Fetch incident details
-  const summarizeIncident = async () => {
-    if (!selectedIncident) return;
-    try {
-      const response = await api.get(`/ais/v1/incidents/${selectedIncident}/description`);
-      setAlertDescriptions(response.data);
-    } catch (error) {
-      console.error("Error fetching incident description:", error);
-    }
-  };
+# Define your SQL query
+query = "SELECT * FROM your_table_name LIMIT 10;"
 
-  return (
-    <Container maxWidth="lg" sx={{ mt: 5, backgroundColor: "#ffffff" }}>
-      <Typography variant="h4" textAlign="center" fontWeight="bold" color="error" gutterBottom>
-        Advanced Incident Summarization
-      </Typography>
+# Execute the query
+cur.execute(query)
 
-      <Card sx={{ boxShadow: 5, borderRadius: 3, backgroundColor: "#ffffff", border: "2px solid #ff0000", p: 3 }}>
-        <CardContent>
-          {/* Input Fields and Get Incidents Button */}
-          <Grid2 container spacing={2} justifyContent="center">
-            <Grid2 xs={6}>
-              <TextField
-                label="alert_threshold"
-                fullWidth
-                variant="outlined"
-                value={alertThreshold}
-                onChange={(e) => setAlertThreshold(e.target.value)}
-                sx={{ 
-                  backgroundColor: "white", 
-                  borderRadius: 1, 
-                  mb: 2,
-                  "& .MuiInputBase-root": { height: 40 },
-                  "& .MuiOutlinedInput-root": { borderColor: "#ff0000" },
-                }}
-              />
-            </Grid2>
-            <Grid2 xs={6}>
-              <TextField
-                label="n_records"
-                fullWidth
-                variant="outlined"
-                value={nRecords}
-                onChange={(e) => setNRecords(e.target.value)}
-                sx={{ 
-                  backgroundColor: "white", 
-                  borderRadius: 1, 
-                  mb: 2,
-                  "& .MuiInputBase-root": { height: 40 },
-                  "& .MuiOutlinedInput-root": { borderColor: "#ff0000" },
-                }}
-              />
-            </Grid2>
-            <Grid2 xs={12} sx={{ textAlign: "center" }}>
-              <Button
-                variant="contained"
-                color="error"
-                onClick={fetchIncidents}
-                sx={{ fontWeight: "bold", width: "100%", height: 40 }}
-              >
-                Get Incidents
-              </Button>
-            </Grid2>
-          </Grid2>
+# Fetch all results
+results = cur.fetchall()
 
-          {/* Dropdown for Incidents */}
-          <Grid2 container spacing={2} justifyContent="center" sx={{ mt: 2 }}>
-            <Grid2 xs={8}>
-              <FormControl fullWidth>
-                <InputLabel shrink sx={{ backgroundColor: "white", px: 1, color: "#ff0000" }}>
-                  DD Incidents
-                </InputLabel>
-                <Select
-                  value={selectedIncident || ""} // Fallback to empty string if undefined
-                  onChange={(e) => setSelectedIncident(e.target.value.toString())} // Ensure value is a string
-                  sx={{ 
-                    backgroundColor: "white", 
-                    borderRadius: 1,
-                    "& .MuiInputBase-root": { height: 40 },
-                    width: "400px",
-                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#ff0000" },
-                  }}
-                  MenuProps={{
-                    PaperProps: {
-                      sx: {
-                        maxHeight: 200,
-                        marginTop: 1,
-                        width: "400px",
-                        border: "1px solid #ff0000",
-                      },
-                    },
-                  }}
-                >
-                  {Array.isArray(incidents) && incidents.map((incident) => (
-                    <MenuItem key={incident.id} value={incident.id ? incident.id.toString() : ""}>
-                      {`Incident ${incident.id} - ${incident.n_alerts} alerts`}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid2>
-          </Grid2>
+# Print the results
+for row in results:
+    print(row)
 
-          {/* Summarize Button (Conditional) */}
-          {selectedIncident && (
-            <Grid2 container spacing={2} justifyContent="center" sx={{ mt: 2 }}>
-              <Grid2 xs={8} sx={{ textAlign: "center" }}>
-                <Button
-                  variant="contained"
-                  color="error"
-                  onClick={summarizeIncident}
-                  sx={{ fontWeight: "bold", width: "100%", height: 40 }}
-                >
-                  Summarize
-                </Button>
-              </Grid2>
-            </Grid2>
-          )}
-
-          {/* Incident Details Section */}
-          <Box mt={3} p={2} sx={{ backgroundColor: "#ffe6e6", borderRadius: 2, border: "1px solid #ff0000" }}>
-            <Typography variant="h6" fontWeight="bold" color="error" gutterBottom>
-              Incident Details
-            </Typography>
-            {alertDescriptions.length > 0 ? (
-              <Box sx={{ maxHeight: 300, overflowY: "auto", pr: 2 }}>
-                {alertDescriptions.map((alert) => (
-                  <Box
-                    key={alert.id}
-                    sx={{
-                      backgroundColor: "white",
-                      borderRadius: 1,
-                      p: 2,
-                      mb: 2,
-                      boxShadow: 1,
-                      border: "1px solid #ff0000",
-                    }}
-                  >
-                    <Typography variant="subtitle1" fontWeight="bold" color="error">
-                      Incident ID: {alert.id}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      <strong>Identifier:</strong> {alert.identifier}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      <strong>Description:</strong> {alert.description}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-            ) : (
-              <Typography sx={{ mt: 1, fontStyle: "italic", color: "#ff0000" }}>
-                No details available
-              </Typography>
-            )}
-          </Box>
-        </CardContent>
-      </Card>
-    </Container>
-  );
-};
-
-export default App;
+# Close cursor and connection
+cur.close()
+conn.close()
