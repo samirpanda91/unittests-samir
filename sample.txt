@@ -1,15 +1,24 @@
+# tests/test_logger_config.py
 import pytest
+from importlib import reload
 
-def test_write_kafka_log_entry_with_monkeypatch(monkeypatch):
-    # Create lists to record calls to our dummy implementations
-    log_entry_calls = []
-    logger_log_calls = []
+def test_write_kafka_log_entry(monkeypatch):
+    """
+    Test write_kafka_log_entry by replacing Log_entry and logger.log in
+    app.config.logger_config with dummy implementations that record call data.
+    """
+    # Import the module under test.
+    import app.config.logger_config as lc
 
-    # Create a dummy Log_entry class to record instantiation and simulate behavior.
+    # Lists to record calls.
+    log_entry_calls = []      # to record instantiations of Log_entry
+    logger_log_calls = []     # to record calls to logger.log
+
+    # Create a dummy replacement for Log_entry.
     class DummyLogEntry:
-        # Simulate the severity conversion dictionary
+        # Simulate the severity conversion mapping.
         severity_conversion = {1: "INFO"}
-        
+
         def __init__(self, message, level, catalog, error_number, message_vars, extra):
             log_entry_calls.append({
                 "message": message,
@@ -17,43 +26,39 @@ def test_write_kafka_log_entry_with_monkeypatch(monkeypatch):
                 "catalog": catalog,
                 "error_number": error_number,
                 "message_vars": message_vars,
-                "extra": extra
+                "extra": extra,
             })
-            
+
         def get_log_message_json(self):
-            # Return a dummy JSON string
             return '{"dummy": "json"}'
-    
-    # Replace the Log_entry used in logger.py with DummyLogEntry.
-    # (Note: the first argument here must be the module path where write_kafka_log_entry uses it.)
-    monkeypatch.setattr("logger.Log_entry", DummyLogEntry)
-    
-    # Replace the logger.log function in logger.py with a dummy function that records its calls.
-    def dummy_log(level, message):
-        logger_log_calls.append((level, message))
-    
-    monkeypatch.setattr("logger.logger.log", dummy_log)
-    
-    # Import the function after monkeypatching so it uses the replaced objects.
-    from logger import write_kafka_log_entry
-    
-    # Call the function to trigger our dummy implementations.
-    write_kafka_log_entry("Test message", level=1, error_number=1234)
-    
-    # Now we can use normal assertions on our recorded call data.
-    
-    # Check that a Log_entry was created with the expected parameters.
-    assert len(log_entry_calls) == 1, f"Expected one Log_entry instantiation, got {len(log_entry_calls)}"
+
+    # Create a dummy logger.log function to record its call.
+    def dummy_log(log_level, log_message):
+        logger_log_calls.append((log_level, log_message))
+
+    # Patch the Log_entry used in logger_config with DummyLogEntry.
+    monkeypatch.setattr(lc, "Log_entry", DummyLogEntry)
+    # Patch the logger.log function in the logger_config module.
+    monkeypatch.setattr(lc.logger, "log", dummy_log)
+
+    # (Optional) Reload the module to ensure that any cached references are updated.
+    reload(lc)
+
+    # Now call the function under test.
+    lc.write_kafka_log_entry("Test message", level=1, error_number=1234)
+
+    # Assert that the dummy Log_entry was instantiated once with the expected parameters.
+    assert len(log_entry_calls) == 1, f"Expected 1 Log_entry instantiation, got {len(log_entry_calls)}"
     call = log_entry_calls[0]
-    assert call["message"] == "Test message"
-    assert call["level"] == 1
-    assert call["catalog"] == "bpan-autoenrichmentmaps"
-    assert call["error_number"] == "1234"  # Note: error_number is converted to a string
-    assert call["message_vars"] == ("Test message",)
-    assert call["extra"] == {"component": "emap-auto-enrichment-maps"}
-    
-    # Check that logger.log was called with the converted level and expected JSON output.
-    assert len(logger_log_calls) == 1, f"Expected one logger.log call, got {len(logger_log_calls)}"
+    assert call["message"] == "Test message", f"Unexpected message: {call['message']}"
+    assert call["level"] == 1, f"Unexpected level: {call['level']}"
+    assert call["catalog"] == "bpan-autoenrichmentmaps", f"Unexpected catalog: {call['catalog']}"
+    assert call["error_number"] == "1234", f"Expected error_number '1234', got {call['error_number']}"
+    assert call["message_vars"] == ("Test message",), f"Unexpected message_vars: {call['message_vars']}"
+    assert call["extra"] == {"component": "emap-auto-enrichment-maps"}, f"Unexpected extra: {call['extra']}"
+
+    # Assert that logger.log was called once with the correct parameters.
+    assert len(logger_log_calls) == 1, f"Expected 1 logger.log call, got {len(logger_log_calls)}"
     logged_level, logged_message = logger_log_calls[0]
-    assert logged_level == "INFO"
-    assert logged_message == '{"dummy": "json"}'
+    assert logged_level == "INFO", f"Expected log level 'INFO', got {logged_level}"
+    assert logged_message == '{"dummy": "json"}', f"Unexpected logged message: {logged_message}"
