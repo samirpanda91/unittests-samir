@@ -1,27 +1,30 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from main import write_kafka_log_entry  # Adjust the import based on your module structure
+from main import write_kafka_log_entry  # Adjust if needed
 
 @patch("loguru.logger.log")  # Mock Loguru's logger
-@patch("aiops_logger.aiops_logger.Log_entry")  # Mock Log_entry
+@patch("aiops_logger.aiops_logger.Log_entry")  # Mock Log_entry class
 def test_write_kafka_log_entry(mock_log_entry, mock_logger):
     """Test logging to Kafka with a mock Log_entry and Loguru logger"""
 
-    # Mock Log_entry instance
+    # Create a mock instance of Log_entry
     mock_entry_instance = MagicMock()
     mock_entry_instance.get_log_message_json.return_value = '{"mocked": "json"}'
-    
-    # Mock Log_entry constructor to return the mock instance
+    mock_entry_instance.level = 1  # Mock level (INFO)
+
+    # Mock the Log_entry constructor to return our mock instance
     mock_log_entry.return_value = mock_entry_instance
-    mock_log_entry.severity_conversion = {mock_entry_instance.level: "INFO"}  # Mock severity conversion
+
+    # Mock severity_conversion dict inside Log_entry
+    mock_log_entry.severity_conversion = {1: "INFO"}  # Simulating INFO level conversion
 
     # Call the function
-    write_kafka_log_entry("Test message", level=mock_entry_instance.level, error_number=1234)
+    write_kafka_log_entry("Test message", level=1, error_number=1234)
 
     # Assertions
     mock_log_entry.assert_called_once_with(
         message="Test message",
-        level=mock_entry_instance.level,
+        level=1,
         catalog="bpan-autoenrichmentmaps",
         error_number="1234",
         message_vars=("Test message",),
@@ -29,6 +32,6 @@ def test_write_kafka_log_entry(mock_log_entry, mock_logger):
     )
     
     mock_logger.assert_called_once_with(
-        "INFO",  # Log level from severity_conversion
+        "INFO",  # Expected log level
         '{"mocked": "json"}',  # Mocked JSON log message
     )
