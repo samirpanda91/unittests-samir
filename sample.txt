@@ -1,72 +1,34 @@
 import pytest
-from fastapi.testclient import TestClient
-from main import app
+from unittest.mock import MagicMock, patch
+from main import write_kafka_log_entry  # Adjust the import based on your module structure
 
-client = TestClient(app)
+@patch("loguru.logger.log")  # Mock Loguru's logger
+@patch("aiops_logger.aiops_logger.Log_entry")  # Mock Log_entry
+def test_write_kafka_log_entry(mock_log_entry, mock_logger):
+    """Test logging to Kafka with a mock Log_entry and Loguru logger"""
 
-def test_get_status():
-    response = client.get("/status")
-    assert response.status_code == 200
-    assert "application" in response.json()
-    assert "host" in response.json()
-    assert "pid" in response.json()
-    assert "status" in response.json()
-
-@pytest.mark.asyncio
-async def test_update_map(mocker):
-    mock_result = {"message": "Enrichment maps updated successfully !"}
-    mocker.patch("auto_enrichment_obj.update_bp_mapping", return_value=mock_result)
-
-    response = client.get("/update-map/test_type")
-    assert response.status_code == 200
-    assert response.json() == mock_result
-
-def test_download_csv(mocker):
-    mock_path = "/tmp/test_mapping.csv"
-    mocker.patch("constants.TEST_TYPE_FILE_PATH", mock_path)
+    # Mock Log_entry instance
+    mock_entry_instance = MagicMock()
+    mock_entry_instance.get_log_message_json.return_value = '{"mocked": "json"}'
     
-    response = client.get("/download-csv/test_type")
-    if response.status_code == 200:
-        assert response.headers["content-type"] == "text/csv"
-    else:
-        assert response.status_code == 404
+    # Mock Log_entry constructor to return the mock instance
+    mock_log_entry.return_value = mock_entry_instance
+    mock_log_entry.severity_conversion = {mock_entry_instance.level: "INFO"}  # Mock severity conversion
 
+    # Call the function
+    write_kafka_log_entry("Test message", level=mock_entry_instance.level, error_number=1234)
 
-import pytest
-import io
-import pandas as pd
-from fastapi.testclient import TestClient
-from main import app
-
-client = TestClient(app)
-
-def test_mapping_upload_csv_invalid_file():
-    """Test uploading a non-CSV file"""
-    response = client.post("/upload-csv/test_type", files={"file": ("test.txt", b"Invalid content", "text/plain")})
-    assert response.status_code == 400
-    assert response.json()["detail"] == "File must be a CSV"
-
-@pytest.mark.asyncio
-async def test_mapping_upload_csv_valid(mocker):
-    """Test uploading a valid CSV file"""
-    csv_content = "col1,col2\nval1,val2"
-    csv_file = io.BytesIO(csv_content.encode())
-
-    mocker.patch("auto_enrichment_obj.call_to_bp_api", return_value={"message": "File processed and updated mapping successfully"})
-
-    response = client.post("/upload-csv/test_type", files={"file": ("test.csv", csv_file, "text/csv")})
-    assert response.status_code == 200
-    assert response.json()["message"] == "File processed and updated mapping successfully"
-
-def test_enrichment_mapping():
-    """Test enrichment-mapping endpoint"""
-    response = client.get("/enrichment-mapping/test_type")
-    assert response.status_code == 200
-    assert "text/html" in response.headers["content-type"]
-
-def test_main_enrichment_mapping():
-    """Test main enrichment-mapping UI endpoint"""
-    response = client.get("/enrichment-mapping")
-    assert response.status_code == 200
-    assert "text/html" in response.headers["content-type"]
-
+    # Assertions
+    mock_log_entry.assert_called_once_with(
+        message="Test message",
+        level=mock_entry_instance.level,
+        catalog="bpan-autoenrichmentmaps",
+        error_number="1234",
+        message_vars=("Test message",),
+        extra={"component": "emap-auto-enrichment-maps"},
+    )
+    
+    mock_logger.assert_called_once_with(
+        "INFO",  # Log level from severity_conversion
+        '{"mocked": "json"}',  # Mocked JSON log message
+    )
