@@ -1,71 +1,72 @@
-import csv
-import os
-import gzip
-import shutil
-from concurrent.futures import ThreadPoolExecutor
+import pytest
+from fastapi.testclient import TestClient
+from main import app
 
-# Configurable constants
-INPUT_CSV = "large_file.csv"  # Path to your large CSV file
-OUTPUT_DIR = "split_files"  # Directory to store the split files
-LINES_PER_FILE = 20_000  # Number of lines per split file
-ZIP_PARALLELISM = 4  # Number of threads for parallel zipping
+client = TestClient(app)
 
+def test_get_status():
+    response = client.get("/status")
+    assert response.status_code == 200
+    assert "application" in response.json()
+    assert "host" in response.json()
+    assert "pid" in response.json()
+    assert "status" in response.json()
 
-def split_csv(input_csv, output_dir, lines_per_file):
-    """Splits a large CSV file into smaller chunks."""
-    os.makedirs(output_dir, exist_ok=True)
+@pytest.mark.asyncio
+async def test_update_map(mocker):
+    mock_result = {"message": "Enrichment maps updated successfully !"}
+    mocker.patch("auto_enrichment_obj.update_bp_mapping", return_value=mock_result)
+
+    response = client.get("/update-map/test_type")
+    assert response.status_code == 200
+    assert response.json() == mock_result
+
+def test_download_csv(mocker):
+    mock_path = "/tmp/test_mapping.csv"
+    mocker.patch("constants.TEST_TYPE_FILE_PATH", mock_path)
     
-    with open(input_csv, mode="r", newline="", encoding="utf-8") as infile:
-        reader = csv.reader(infile)
-        header = next(reader)  # Read the header row
-        
-        file_index = 1
-        output_file = None
-        writer = None
-        line_count = 0
-
-        for row in reader:
-            if line_count % lines_per_file == 0:
-                if output_file:
-                    output_file.close()
-                
-                chunk_filename = os.path.join(output_dir, f"chunk_{file_index}.csv")
-                output_file = open(chunk_filename, mode="w", newline="", encoding="utf-8")
-                writer = csv.writer(output_file)
-                
-                writer.writerow(header)  # Write header to new file
-                file_index += 1
-
-            writer.writerow(row)
-            line_count += 1
-
-        if output_file:
-            output_file.close()
-
-    return [os.path.join(output_dir, f) for f in os.listdir(output_dir) if f.endswith(".csv")]
+    response = client.get("/download-csv/test_type")
+    if response.status_code == 200:
+        assert response.headers["content-type"] == "text/csv"
+    else:
+        assert response.status_code == 404
 
 
-def gzip_file(file_path):
-    """Compresses a file using gzip."""
-    gz_path = file_path + ".gz"
-    with open(file_path, "rb") as f_in, gzip.open(gz_path, "wb") as f_out:
-        shutil.copyfileobj(f_in, f_out)
-    
-    os.remove(file_path)  # Delete the original CSV file after compression
-    return gz_path
+import pytest
+import io
+import pandas as pd
+from fastapi.testclient import TestClient
+from main import app
 
+client = TestClient(app)
 
-def parallel_gzip(file_paths, num_threads=ZIP_PARALLELISM):
-    """Compresses files in parallel."""
-    with ThreadPoolExecutor(max_workers=num_threads) as executor:
-        list(executor.map(gzip_file, file_paths))
+def test_mapping_upload_csv_invalid_file():
+    """Test uploading a non-CSV file"""
+    response = client.post("/upload-csv/test_type", files={"file": ("test.txt", b"Invalid content", "text/plain")})
+    assert response.status_code == 400
+    assert response.json()["detail"] == "File must be a CSV"
 
+@pytest.mark.asyncio
+async def test_mapping_upload_csv_valid(mocker):
+    """Test uploading a valid CSV file"""
+    csv_content = "col1,col2\nval1,val2"
+    csv_file = io.BytesIO(csv_content.encode())
 
-if __name__ == "__main__":
-    print("Splitting CSV...")
-    split_files = split_csv(INPUT_CSV, OUTPUT_DIR, LINES_PER_FILE)
-    
-    print(f"Created {len(split_files)} chunk files. Compressing...")
-    parallel_gzip(split_files)
-    
-    print("All files compressed successfully!")
+    mocker.patch("auto_enrichment_obj.call_to_bp_api", return_value={"message": "File processed and updated mapping successfully"})
+
+    response = client.post("/upload-csv/test_type", files={"file": ("test.csv", csv_file, "text/csv")})
+    assert response.status_code == 200
+    assert response.json()["message"] == "File processed and updated mapping successfully"
+
+def test_enrichment_mapping():
+    """Test enrichment-mapping endpoint"""
+    response = client.get("/enrichment-mapping/test_type")
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+
+def test_main_enrichment_mapping():
+    """Test main enrichment-mapping UI endpoint"""
+    response = client.get("/enrichment-mapping")
+    assert response.status_code == 200
+    assert "text/html" in response.headers["content-type"]
+
