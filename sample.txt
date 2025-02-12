@@ -1,37 +1,59 @@
 import pytest
-from unittest.mock import MagicMock, patch
-from main import write_kafka_log_entry  # Adjust if needed
 
-@patch("loguru.logger.log")  # Mock Loguru's logger
-@patch("aiops_logger.aiops_logger.Log_entry")  # Mock Log_entry class
-def test_write_kafka_log_entry(mock_log_entry, mock_logger):
-    """Test logging to Kafka with a mock Log_entry and Loguru logger"""
+def test_write_kafka_log_entry_with_monkeypatch(monkeypatch):
+    # Create lists to record calls to our dummy implementations
+    log_entry_calls = []
+    logger_log_calls = []
 
-    # Create a mock instance of Log_entry
-    mock_entry_instance = MagicMock()
-    mock_entry_instance.get_log_message_json.return_value = '{"mocked": "json"}'
-    mock_entry_instance.level = 1  # Mock level (INFO)
-
-    # Mock the Log_entry constructor to return our mock instance
-    mock_log_entry.return_value = mock_entry_instance
-
-    # Mock severity_conversion dict inside Log_entry
-    mock_log_entry.severity_conversion = {1: "INFO"}  # Simulating INFO level conversion
-
-    # Call the function
-    write_kafka_log_entry("Test message", level=1, error_number=1234)
-
-    # Assertions
-    mock_log_entry.assert_called_once_with(
-        message="Test message",
-        level=1,
-        catalog="bpan-autoenrichmentmaps",
-        error_number="1234",
-        message_vars=("Test message",),
-        extra={"component": "emap-auto-enrichment-maps"},
-    )
+    # Create a dummy Log_entry class to record instantiation and simulate behavior.
+    class DummyLogEntry:
+        # Simulate the severity conversion dictionary
+        severity_conversion = {1: "INFO"}
+        
+        def __init__(self, message, level, catalog, error_number, message_vars, extra):
+            log_entry_calls.append({
+                "message": message,
+                "level": level,
+                "catalog": catalog,
+                "error_number": error_number,
+                "message_vars": message_vars,
+                "extra": extra
+            })
+            
+        def get_log_message_json(self):
+            # Return a dummy JSON string
+            return '{"dummy": "json"}'
     
-    mock_logger.assert_called_once_with(
-        "INFO",  # Expected log level
-        '{"mocked": "json"}',  # Mocked JSON log message
-    )
+    # Replace the Log_entry used in logger.py with DummyLogEntry.
+    # (Note: the first argument here must be the module path where write_kafka_log_entry uses it.)
+    monkeypatch.setattr("logger.Log_entry", DummyLogEntry)
+    
+    # Replace the logger.log function in logger.py with a dummy function that records its calls.
+    def dummy_log(level, message):
+        logger_log_calls.append((level, message))
+    
+    monkeypatch.setattr("logger.logger.log", dummy_log)
+    
+    # Import the function after monkeypatching so it uses the replaced objects.
+    from logger import write_kafka_log_entry
+    
+    # Call the function to trigger our dummy implementations.
+    write_kafka_log_entry("Test message", level=1, error_number=1234)
+    
+    # Now we can use normal assertions on our recorded call data.
+    
+    # Check that a Log_entry was created with the expected parameters.
+    assert len(log_entry_calls) == 1, f"Expected one Log_entry instantiation, got {len(log_entry_calls)}"
+    call = log_entry_calls[0]
+    assert call["message"] == "Test message"
+    assert call["level"] == 1
+    assert call["catalog"] == "bpan-autoenrichmentmaps"
+    assert call["error_number"] == "1234"  # Note: error_number is converted to a string
+    assert call["message_vars"] == ("Test message",)
+    assert call["extra"] == {"component": "emap-auto-enrichment-maps"}
+    
+    # Check that logger.log was called with the converted level and expected JSON output.
+    assert len(logger_log_calls) == 1, f"Expected one logger.log call, got {len(logger_log_calls)}"
+    logged_level, logged_message = logger_log_calls[0]
+    assert logged_level == "INFO"
+    assert logged_message == '{"dummy": "json"}'
