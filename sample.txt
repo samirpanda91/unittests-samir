@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   Container, TextField, Button, Typography, Box, Paper, List, ListItem, ListItemText, ListItemButton, Checkbox,
-  MenuItem, Select, FormControl, InputLabel
+  MenuItem, Select, FormControl, InputLabel, Alert
 } from "@mui/material";
 
 const App = () => {
@@ -11,6 +11,7 @@ const App = () => {
   const [selectedIncident, setSelectedIncident] = useState("");
   const [incidentDetails, setIncidentDetails] = useState([]);
   const [summary, setSummary] = useState(null);
+  const [isDataFetched, setIsDataFetched] = useState(false); // New state for showing message
 
   const fetchIncidents = async () => {
     try {
@@ -19,9 +20,11 @@ const App = () => {
       });
       const fetchedIncidents = Array.isArray(response.data) ? response.data : [];
       setIncidents(fetchedIncidents);
+      setIsDataFetched(true); // Set to true when data is fetched
     } catch (error) {
       console.error("Error fetching incidents:", error);
       setIncidents([]);
+      setIsDataFetched(false); // Reset if there's an error
     }
   };
 
@@ -85,6 +88,13 @@ const App = () => {
           >
             Get Incidents
           </Button>
+
+          {/* Message After Fetching Data */}
+          {isDataFetched && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              Incident data has been successfully fetched.
+            </Alert>
+          )}
 
           {/* Dropdown for Incidents */}
           <FormControl fullWidth sx={{ mb: 2 }}>
