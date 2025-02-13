@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   Container, TextField, Button, MenuItem, Select, FormControl, InputLabel,
-  Typography, Box, Paper, Alert
+  Typography, Box, Paper, Alert, Checkbox
 } from "@mui/material";
 import Grid2 from "@mui/material/Unstable_Grid2";
 
@@ -21,10 +21,6 @@ const App = () => {
       });
       const fetchedIncidents = Array.isArray(response.data) ? response.data : [];
       setIncidents(fetchedIncidents);
-      if (fetchedIncidents.length > 0) {
-        setSelectedIncident(fetchedIncidents[0].id.toString());
-        handleIncidentSelect(fetchedIncidents[0].id);
-      }
       setIsDropdownPopulated(true);
     } catch (error) {
       console.error("Error fetching incidents:", error);
@@ -54,12 +50,6 @@ const App = () => {
       setSummarizedDetails(null);
     }
   };
-
-  useEffect(() => {
-    if (isDropdownPopulated) {
-      console.log("Dropdown is populated. Please select an incident.");
-    }
-  }, [isDropdownPopulated]);
 
   return (
     <Container maxWidth={false} sx={{ mt: 5, height: "100vh", width: "100%", p: 0 }}>
@@ -103,18 +93,18 @@ const App = () => {
               sx={{ backgroundColor: "white", borderRadius: 1, "& .MuiInputBase-root": { height: 40 } }}
               MenuProps={{ PaperProps: { sx: { maxHeight: 200, marginTop: 1 } } }}
             >
+              {isDropdownPopulated && (
+                <MenuItem disabled sx={{ fontStyle: "italic" }}>
+                  Dropdown is populated. Please select an incident.
+                </MenuItem>
+              )}
               {Array.isArray(incidents) && incidents.map((incident) => (
                 <MenuItem key={incident.id} value={incident.id ? incident.id.toString() : ""}>
-                  {`Incident ${incident.id} - ${incident.n_alerts} alerts`}
+                  {`Incident ${incident.id}`}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
-          {isDropdownPopulated && (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Dropdown is populated. Please select an incident.
-            </Alert>
-          )}
           <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
             Incident Details
           </Typography>
@@ -126,21 +116,22 @@ const App = () => {
                 sx={{
                   backgroundColor: selectedIncident === alert.id.toString() ? "#e3f2fd" : "white",
                   borderRadius: 1,
-                  p: 2,
-                  mb: 2,
+                  p: 1,
+                  mb: 1,
                   boxShadow: 1,
                   cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
                   "&:hover": { backgroundColor: "#e3f2fd" }
                 }}
               >
+                <Checkbox
+                  checked={selectedIncident === alert.id.toString()}
+                  sx={{ p: 0 }}
+                />
                 <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
                   Incident ID: {alert.id}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  <strong>Identifier:</strong> {alert.identifier}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  <strong>Description:</strong> {alert.description}
                 </Typography>
               </Box>
             ))}
