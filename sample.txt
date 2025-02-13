@@ -1,37 +1,240 @@
-# tests/test_logger_config.py
-import pytest
-from unittest.mock import MagicMock, patch
+import React, { useState } from "react";
+import {
+  Container, TextField, Button, MenuItem, Select, FormControl, InputLabel,
+  Typography, Card, CardContent, Box
+} from "@mui/material";
+import Grid2 from "@mui/material/Unstable_Grid2"; // Import Grid2
+import api from "./api"; // Import Axios instance
 
-def test_write_kafka_log_entry():
-    # Import the function from its module.
-    # This import must come before (or within) the patch context so that the patched names are used.
-    from app.config.logger_config import write_kafka_log_entry
+const App = () => {
+  // Initialize with default values
+  const [alertThreshold, setAlertThreshold] = useState("10");
+  const [nRecords, setNRecords] = useState("20");
+  const [incidents, setIncidents] = useState([]);
+  const [selectedIncident, setSelectedIncident] = useState("");
+  const [incidentDetails, setIncidentDetails] = useState(null);
+  const [summarizedDetails, setSummarizedDetails] = useState(null);
 
-    # Patch the Log_entry and logger.log in app.config.logger_config.
-    with patch("app.config.logger_config.Log_entry") as mock_log_entry, \
-         patch("app.config.logger_config.logger.log") as mock_logger:
-         
-         # Create a dummy instance for Log_entry.
-         dummy_instance = MagicMock()
-         dummy_instance.get_log_message_json.return_value = '{"dummy": "json"}'
-         dummy_instance.level = 1
-         mock_log_entry.return_value = dummy_instance
-         
-         # Set the severity conversion mapping on the patched Log_entry.
-         mock_log_entry.severity_conversion = {1: "INFO"}
-         
-         # Call the function under test.
-         write_kafka_log_entry("Test message", level=1, error_number=1234)
-         
-         # Verify that Log_entry was instantiated once with the correct parameters.
-         mock_log_entry.assert_called_once_with(
-             message="Test message",
-             level=1,
-             catalog="bpan-autoenrichmentmaps",
-             error_number="1234",           # Note: error_number is converted to string.
-             message_vars=("Test message",),
-             extra={"component": "emap-auto-enrichment-maps"}
-         )
-         
-         # Verify that logger.log was called once with the expected log level and message.
-         mock_logger.assert_called_once_with("INFO", '{"dummy": "json"}')
+  // Fetch incidents from API
+  const fetchIncidents = async () => {
+    try {
+      const response = await api.get("/ais/v1/incidents", {
+        params: { alert_threshold: alertThreshold, n_records: nRecords }
+      });
+      console.log("API Response:", response.data); // Debug the response
+      setIncidents(Array.isArray(response.data) ? response.data : []); // Ensure incidents is an array
+    } catch (error) {
+      console.error("Error fetching incidents:", error);
+      setIncidents([]); // Set incidents to an empty array on error
+    }
+  };
+
+  // Fetch incident details when an incident is selected from the dropdown
+  const handleIncidentSelect = async (incidentId) => {
+    setSelectedIncident(incidentId);
+    try {
+      const response = await api.get(`/ais/v1/incidents/${incidentId}/description`);
+      setIncidentDetails(response.data);
+    } catch (error) {
+      console.error("Error fetching incident details:", error);
+      setIncidentDetails(null);
+    }
+  };
+
+  // Summarize incident details
+  const summarizeIncident = async () => {
+    if (!selectedIncident) return;
+    try {
+      const response = await api.get(`/ais/v1/incidents/${selectedIncident}/summarize`);
+      setSummarizedDetails(response.data);
+    } catch (error) {
+      console.error("Error summarizing incident:", error);
+      setSummarizedDetails(null);
+    }
+  };
+
+  return (
+    <Container maxWidth="lg" sx={{ mt: 5, backgroundColor: "#ffffff" }}>
+      <Typography variant="h4" textAlign="center" fontWeight="bold" color="error" gutterBottom>
+        Advanced Incident Summarization
+      </Typography>
+
+      <Grid2 container spacing={4}>
+        {/* Left Side: Input Fields, Get Incidents Button, Dropdown, and Incident Details */}
+        <Grid2 xs={6}>
+          <Card sx={{ boxShadow: 5, borderRadius: 3, backgroundColor: "#ffffff", border: "2px solid #ff0000", p: 3 }}>
+            <CardContent>
+              {/* Input Fields and Get Incidents Button */}
+              <Grid2 container spacing={2}>
+                <Grid2 xs={6}>
+                  <TextField
+                    label="alert_threshold"
+                    fullWidth
+                    variant="outlined"
+                    value={alertThreshold}
+                    onChange={(e) => setAlertThreshold(e.target.value)}
+                    sx={{ 
+                      backgroundColor: "white", 
+                      borderRadius: 1, 
+                      mb: 2,
+                      "& .MuiInputBase-root": { height: 40 },
+                      "& .MuiOutlinedInput-root": { borderColor: "#ff0000" },
+                    }}
+                  />
+                </Grid2>
+                <Grid2 xs={6}>
+                  <TextField
+                    label="n_records"
+                    fullWidth
+                    variant="outlined"
+                    value={nRecords}
+                    onChange={(e) => setNRecords(e.target.value)}
+                    sx={{ 
+                      backgroundColor: "white", 
+                      borderRadius: 1, 
+                      mb: 2,
+                      "& .MuiInputBase-root": { height: 40 },
+                      "& .MuiOutlinedInput-root": { borderColor: "#ff0000" },
+                    }}
+                  />
+                </Grid2>
+                <Grid2 xs={12} sx={{ textAlign: "center" }}>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    onClick={fetchIncidents}
+                    sx={{ fontWeight: "bold", width: "100%", height: 40 }}
+                  >
+                    Get Incidents
+                  </Button>
+                </Grid2>
+              </Grid2>
+
+              {/* Dropdown for Incidents */}
+              {incidents.length > 0 && (
+                <Grid2 container spacing={2} sx={{ mt: 2 }}>
+                  <Grid2 xs={12}>
+                    <FormControl fullWidth>
+                      <InputLabel shrink sx={{ backgroundColor: "white", px: 1, color: "#ff0000" }}>
+                        DD Incidents
+                      </InputLabel>
+                      <Select
+                        value={selectedIncident || ""}
+                        onChange={(e) => handleIncidentSelect(e.target.value)}
+                        sx={{ 
+                          backgroundColor: "white", 
+                          borderRadius: 1,
+                          "& .MuiInputBase-root": { height: 40 },
+                          width: "100%",
+                          "& .MuiOutlinedInput-notchedOutline": { borderColor: "#ff0000" },
+                        }}
+                        MenuProps={{
+                          PaperProps: {
+                            sx: {
+                              maxHeight: 200,
+                              marginTop: 1,
+                              width: "100%",
+                              border: "1px solid #ff0000",
+                            },
+                          },
+                        }}
+                      >
+                        {incidents.map((incident) => (
+                          <MenuItem key={incident.id} value={incident.id}>
+                            {`Incident ${incident.id} - ${incident.n_alerts} alerts`}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid2>
+                </Grid2>
+              )}
+
+              {/* Incident Details */}
+              {incidentDetails && (
+                <Box mt={3} p={2} sx={{ backgroundColor: "#ffe6e6", borderRadius: 2, border: "1px solid #ff0000" }}>
+                  <Typography variant="h6" fontWeight="bold" color="error" gutterBottom>
+                    Incident Details
+                  </Typography>
+                  <Box sx={{ maxHeight: 300, overflowY: "auto", pr: 2 }}>
+                    <Box
+                      sx={{
+                        backgroundColor: "white",
+                        borderRadius: 1,
+                        p: 2,
+                        mb: 2,
+                        boxShadow: 1,
+                        border: "1px solid #ff0000",
+                      }}
+                    >
+                      <Typography variant="subtitle1" fontWeight="bold" color="error">
+                        Incident ID: {incidentDetails.id}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        <strong>Identifier:</strong> {incidentDetails.identifier}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        <strong>Description:</strong> {incidentDetails.description}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        </Grid2>
+
+        {/* Right Side: Summarize Button and Summarized Details */}
+        <Grid2 xs={6}>
+          <Card sx={{ boxShadow: 5, borderRadius: 3, backgroundColor: "#ffffff", border: "2px solid #ff0000", p: 3 }}>
+            <CardContent>
+              {/* Summarize Button */}
+              {selectedIncident && (
+                <Box sx={{ textAlign: "center" }}>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    onClick={summarizeIncident}
+                    sx={{ fontWeight: "bold", width: "100%", height: 40 }}
+                  >
+                    Summarize
+                  </Button>
+                </Box>
+              )}
+
+              {/* Summarized Details */}
+              {summarizedDetails && (
+                <Box mt={3} p={2} sx={{ backgroundColor: "#ffe6e6", borderRadius: 2, border: "1px solid #ff0000" }}>
+                  <Typography variant="h6" fontWeight="bold" color="error" gutterBottom>
+                    Summarized Details
+                  </Typography>
+                  <Box sx={{ maxHeight: 300, overflowY: "auto", pr: 2 }}>
+                    <Box
+                      sx={{
+                        backgroundColor: "white",
+                        borderRadius: 1,
+                        p: 2,
+                        mb: 2,
+                        boxShadow: 1,
+                        border: "1px solid #ff0000",
+                      }}
+                    >
+                      <Typography variant="subtitle1" fontWeight="bold" color="error">
+                        Summary for Incident ID: {summarizedDetails.id}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        <strong>Summary:</strong> {summarizedDetails.summary}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        </Grid2>
+      </Grid2>
+    </Container>
+  );
+};
+
+export default App;
