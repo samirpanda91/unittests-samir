@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Container, TextField, Button, MenuItem, Select, FormControl, InputLabel,
-  Typography, Box, Paper
+  Typography, Box, Paper, Alert
 } from "@mui/material";
 import Grid2 from "@mui/material/Unstable_Grid2"; // Import Grid2
 import api from "./api"; // Import Axios instance
@@ -14,6 +14,7 @@ const App = () => {
   const [selectedIncident, setSelectedIncident] = useState("");
   const [incidentDetails, setIncidentDetails] = useState([]); // Store incident details
   const [summarizedDetails, setSummarizedDetails] = useState(null); // Store summarized details
+  const [isDropdownPopulated, setIsDropdownPopulated] = useState(false); // Track if dropdown is populated
 
   // Fetch incidents from API
   const fetchIncidents = async () => {
@@ -22,10 +23,20 @@ const App = () => {
         params: { alert_threshold: alertThreshold, n_records: nRecords }
       });
       console.log("API Response:", response.data); // Debug the response
-      setIncidents(Array.isArray(response.data) ? response.data : []); // Ensure incidents is an array
+      const fetchedIncidents = Array.isArray(response.data) ? response.data : [];
+      setIncidents(fetchedIncidents);
+
+      // Auto-select the first incident if available
+      if (fetchedIncidents.length > 0) {
+        setSelectedIncident(fetchedIncidents[0].id.toString());
+        handleIncidentSelect(fetchedIncidents[0].id); // Fetch details for the first incident
+      }
+
+      setIsDropdownPopulated(true); // Indicate that the dropdown is populated
     } catch (error) {
       console.error("Error fetching incidents:", error);
       setIncidents([]); // Set incidents to an empty array on error
+      setIsDropdownPopulated(false); // Reset dropdown populated state
     }
   };
 
@@ -53,8 +64,15 @@ const App = () => {
     }
   };
 
+  // Effect to provide feedback when dropdown is populated
+  useEffect(() => {
+    if (isDropdownPopulated) {
+      console.log("Dropdown is populated. Please select an incident.");
+    }
+  }, [isDropdownPopulated]);
+
   return (
-    <Container maxWidth="xl" sx={{ mt: 5, height: "100vh" }}>
+    <Container maxWidth={false} sx={{ mt: 5, height: "100vh", width: "100%" }}>
       <Typography variant="h4" textAlign="center" fontWeight="bold" color="primary" gutterBottom>
         Advanced Incident Summarization
       </Typography>
@@ -129,6 +147,13 @@ const App = () => {
                 ))}
               </Select>
             </FormControl>
+
+            {/* Feedback for Dropdown Population */}
+            {isDropdownPopulated && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Dropdown is populated. Please select an incident.
+              </Alert>
+            )}
 
             {/* Incident Details */}
             <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
