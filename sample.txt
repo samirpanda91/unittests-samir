@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   Container, TextField, Button, MenuItem, Select, FormControl, InputLabel,
-  Typography, Card, CardContent, Box
+  Typography, Box, Paper
 } from "@mui/material";
 import Grid2 from "@mui/material/Unstable_Grid2"; // Import Grid2
 import api from "./api"; // Import Axios instance
@@ -12,7 +12,7 @@ const App = () => {
   const [nRecords, setNRecords] = useState("20");
   const [incidents, setIncidents] = useState([]);
   const [selectedIncident, setSelectedIncident] = useState("");
-  const [incidentDetails, setIncidentDetails] = useState(null); // Store selected incident details
+  const [incidentDetails, setIncidentDetails] = useState([]); // Store incident details
   const [summarizedDetails, setSummarizedDetails] = useState(null); // Store summarized details
 
   // Fetch incidents from API
@@ -29,7 +29,7 @@ const App = () => {
     }
   };
 
-  // Fetch incident details when an incident is selected from the dropdown
+  // Fetch incident details when an incident is selected
   const handleIncidentSelect = async (incidentId) => {
     setSelectedIncident(incidentId);
     try {
@@ -37,7 +37,7 @@ const App = () => {
       setIncidentDetails(response.data); // Store incident details
     } catch (error) {
       console.error("Error fetching incident details:", error);
-      setIncidentDetails(null); // Clear incident details on error
+      setIncidentDetails([]); // Clear incident details on error
     }
   };
 
@@ -54,93 +54,93 @@ const App = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 5 }}>
+    <Container maxWidth="lg" sx={{ mt: 5, height: "100vh" }}>
       <Typography variant="h4" textAlign="center" fontWeight="bold" color="primary" gutterBottom>
         Advanced Incident Summarization
       </Typography>
 
-      <Grid2 container spacing={4} sx={{ mt: 3 }}>
+      <Grid2 container spacing={4} sx={{ height: "80vh", mt: 2 }}>
         {/* Left Side: Input Fields, Get Incidents Button, Dropdown, and Incident Details */}
         <Grid2 xs={6}>
-          <Grid2 container spacing={2}>
-            {/* Input Fields */}
-            <Grid2 xs={12}>
-              <TextField
-                label="alert_threshold"
-                fullWidth
-                variant="outlined"
-                value={alertThreshold}
-                onChange={(e) => setAlertThreshold(e.target.value)}
-                sx={{ 
-                  backgroundColor: "white", 
-                  borderRadius: 1, 
-                  mb: 2,
-                  "& .MuiInputBase-root": { height: 40 } // Reduce height of text field
-                }}
-              />
-            </Grid2>
-            <Grid2 xs={12}>
-              <TextField
-                label="n_records"
-                fullWidth
-                variant="outlined"
-                value={nRecords}
-                onChange={(e) => setNRecords(e.target.value)}
-                sx={{ 
-                  backgroundColor: "white", 
-                  borderRadius: 1, 
-                  mb: 2,
-                  "& .MuiInputBase-root": { height: 40 } // Reduce height of text field
-                }}
-              />
-            </Grid2>
-            <Grid2 xs={12} sx={{ textAlign: "center" }}>
-              <Button
-                variant="contained"
-                color="secondary"
-                onClick={fetchIncidents}
-                sx={{ fontWeight: "bold", width: "100%", height: 40 }} // Set width to 100%
-              >
-                Get Incidents
-              </Button>
-            </Grid2>
-
-            {/* Dropdown for Incidents */}
-            <Grid2 xs={12}>
-              <FormControl fullWidth>
-                <InputLabel shrink sx={{ backgroundColor: "white", px: 1 }}>
-                  DD Incidents
-                </InputLabel>
-                <Select
-                  value={selectedIncident || ""} // Fallback to empty string if undefined
-                  onChange={(e) => handleIncidentSelect(e.target.value)}
+          <Paper elevation={3} sx={{ p: 3, height: "100%", overflowY: "auto" }}>
+            <Grid2 container spacing={2}>
+              {/* Input Fields */}
+              <Grid2 xs={12}>
+                <TextField
+                  label="alert_threshold"
+                  fullWidth
+                  variant="outlined"
+                  value={alertThreshold}
+                  onChange={(e) => setAlertThreshold(e.target.value)}
                   sx={{ 
                     backgroundColor: "white", 
-                    borderRadius: 1,
-                    "& .MuiInputBase-root": { height: 40 }, // Reduce height of dropdown
-                    width: "100%", // Full width for dropdown
+                    borderRadius: 1, 
+                    mb: 2,
+                    "& .MuiInputBase-root": { height: 40 } // Reduce height of text field
                   }}
-                  MenuProps={{
-                    PaperProps: {
-                      sx: {
-                        maxHeight: 200, // Add scrollbar after 200px height
-                        marginTop: 1, // Start dropdown just below the label
-                        width: "100%", // Match dropdown width
-                      },
-                    },
+                />
+              </Grid2>
+              <Grid2 xs={12}>
+                <TextField
+                  label="n_records"
+                  fullWidth
+                  variant="outlined"
+                  value={nRecords}
+                  onChange={(e) => setNRecords(e.target.value)}
+                  sx={{ 
+                    backgroundColor: "white", 
+                    borderRadius: 1, 
+                    mb: 2,
+                    "& .MuiInputBase-root": { height: 40 } // Reduce height of text field
                   }}
+                />
+              </Grid2>
+              <Grid2 xs={12} sx={{ textAlign: "center" }}>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  onClick={fetchIncidents}
+                  sx={{ fontWeight: "bold", width: "100%", height: 40 }} // Set width to 100%
                 >
-                  {Array.isArray(incidents) && incidents.map((incident) => (
-                    <MenuItem key={incident.id} value={incident.id ? incident.id.toString() : ""}>
-                      {`Incident ${incident.id} - ${incident.n_alerts} alerts`}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid2>
+                  Get Incidents
+                </Button>
+              </Grid2>
 
-            {/* Incident Details */}
-            {incidentDetails && (
+              {/* Dropdown for Incidents */}
+              <Grid2 xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel shrink sx={{ backgroundColor: "white", px: 1 }}>
+                    DD Incidents
+                  </InputLabel>
+                  <Select
+                    value={selectedIncident || ""} // Fallback to empty string if undefined
+                    onChange={(e) => handleIncidentSelect(e.target.value)}
+                    sx={{ 
+                      backgroundColor: "white", 
+                      borderRadius: 1,
+                      "& .MuiInputBase-root": { height: 40 }, // Reduce height of dropdown
+                      width: "100%", // Full width for dropdown
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          maxHeight: 200, // Add scrollbar after 200px height
+                          marginTop: 1, // Start dropdown just below the label
+                          width: "100%", // Match dropdown width
+                        },
+                      },
+                    }}
+                  >
+                    {Array.isArray(incidents) && incidents.map((incident) => (
+                      <MenuItem key={incident.id} value={incident.id ? incident.id.toString() : ""}>
+                        {`Incident ${incident.id} - ${incident.n_alerts} alerts`}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid2>
+
+              {/* Incident Details */}
               <Grid2 xs={12} sx={{ mt: 3 }}>
                 <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
                   Incident Details
@@ -149,12 +149,15 @@ const App = () => {
                   {incidentDetails.map((alert) => (
                     <Box
                       key={alert.id}
+                      onClick={() => setSelectedIncident(alert.id.toString())} // Make incident clickable
                       sx={{
-                        backgroundColor: "white",
+                        backgroundColor: selectedIncident === alert.id.toString() ? "#e3f2fd" : "white",
                         borderRadius: 1,
                         p: 2,
                         mb: 2,
                         boxShadow: 1,
+                        cursor: "pointer",
+                        "&:hover": { backgroundColor: "#e3f2fd" }
                       }}
                     >
                       <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
@@ -170,51 +173,53 @@ const App = () => {
                   ))}
                 </Box>
               </Grid2>
-            )}
-          </Grid2>
+            </Grid2>
+          </Paper>
         </Grid2>
 
         {/* Right Side: Summarize Button and Summarized Details */}
         <Grid2 xs={6}>
-          <Grid2 container spacing={2}>
-            <Grid2 xs={12} sx={{ textAlign: "center" }}>
-              <Button
-                variant="contained"
-                color="success"
-                onClick={summarizeIncident}
-                sx={{ fontWeight: "bold", width: "100%", height: 40 }} // Increase width and set height of button
-              >
-                Summarize
-              </Button>
-            </Grid2>
-            <Grid2 xs={12} sx={{ mt: 3 }}>
-              <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
-                Summarized Details
-              </Typography>
-              {summarizedDetails ? (
-                <Box sx={{ maxHeight: 300, overflowY: "auto", pr: 2 }}>
-                  <Box
-                    sx={{
-                      backgroundColor: "white",
-                      borderRadius: 1,
-                      p: 2,
-                      mb: 2,
-                      boxShadow: 1,
-                    }}
-                  >
-                    <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
-                      Summary: {summarizedDetails.summary}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      <strong>Key Points:</strong> {summarizedDetails.keyPoints}
-                    </Typography>
+          <Paper elevation={3} sx={{ p: 3, height: "100%", overflowY: "auto" }}>
+            <Grid2 container spacing={2}>
+              <Grid2 xs={12} sx={{ textAlign: "center" }}>
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={summarizeIncident}
+                  sx={{ fontWeight: "bold", width: "100%", height: 40 }} // Increase width and set height of button
+                >
+                  Summarize
+                </Button>
+              </Grid2>
+              <Grid2 xs={12} sx={{ mt: 3 }}>
+                <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
+                  Summarized Details
+                </Typography>
+                {summarizedDetails ? (
+                  <Box sx={{ maxHeight: 300, overflowY: "auto", pr: 2 }}>
+                    <Box
+                      sx={{
+                        backgroundColor: "white",
+                        borderRadius: 1,
+                        p: 2,
+                        mb: 2,
+                        boxShadow: 1,
+                      }}
+                    >
+                      <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
+                        Summary: {summarizedDetails.summary}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        <strong>Key Points:</strong> {summarizedDetails.keyPoints}
+                      </Typography>
+                    </Box>
                   </Box>
-                </Box>
-              ) : (
-                <Typography sx={{ mt: 1, fontStyle: "italic" }}>No summarized details available</Typography>
-              )}
+                ) : (
+                  <Typography sx={{ mt: 1, fontStyle: "italic" }}>No summarized details available</Typography>
+                )}
+              </Grid2>
             </Grid2>
-          </Grid2>
+          </Paper>
         </Grid2>
       </Grid2>
     </Container>
