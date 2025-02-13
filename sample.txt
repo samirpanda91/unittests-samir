@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
-  Container, TextField, Button, Typography, Box, Paper, List, ListItem, ListItemText, ListItemButton, Checkbox
+  Container, TextField, Button, Typography, Box, Paper, List, ListItem, ListItemText, ListItemButton, Checkbox,
+  MenuItem, Select, FormControl, InputLabel
 } from "@mui/material";
 
 const App = () => {
@@ -8,6 +9,7 @@ const App = () => {
   const [nRecords, setNRecords] = useState("20");
   const [incidents, setIncidents] = useState([]);
   const [selectedIncident, setSelectedIncident] = useState("");
+  const [incidentDetails, setIncidentDetails] = useState([]);
   const [summary, setSummary] = useState(null);
 
   const fetchIncidents = async () => {
@@ -20,6 +22,17 @@ const App = () => {
     } catch (error) {
       console.error("Error fetching incidents:", error);
       setIncidents([]);
+    }
+  };
+
+  const handleIncidentSelect = async (incidentId) => {
+    setSelectedIncident(incidentId);
+    try {
+      const response = await api.get(`/ais/v1/incidents/${incidentId}/description`);
+      setIncidentDetails(response.data);
+    } catch (error) {
+      console.error("Error fetching incident details:", error);
+      setIncidentDetails([]);
     }
   };
 
@@ -63,55 +76,83 @@ const App = () => {
             />
           </Box>
 
-          {/* Buttons in One Line */}
-          <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={fetchIncidents}
-              sx={{ fontWeight: "bold", width: "50%", height: 40 }}
+          {/* Get Incidents Button */}
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={fetchIncidents}
+            sx={{ fontWeight: "bold", width: "100%", height: 40, mb: 2 }}
+          >
+            Get Incidents
+          </Button>
+
+          {/* Dropdown for Incidents */}
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel shrink sx={{ backgroundColor: "white", px: 1 }}>
+              DD Incidents
+            </InputLabel>
+            <Select
+              value={selectedIncident || ""}
+              onChange={(e) => handleIncidentSelect(e.target.value)}
+              sx={{ backgroundColor: "white", borderRadius: 1, "& .MuiInputBase-root": { height: 40 } }}
+              MenuProps={{ PaperProps: { sx: { maxHeight: 200, marginTop: 1 } } }}
             >
-              Get Incidents
-            </Button>
-            <Button
-              variant="contained"
-              color="success"
-              onClick={summarizeIncident}
-              sx={{ fontWeight: "bold", width: "50%", height: 40 }}
-            >
-              Summarize
-            </Button>
-          </Box>
+              {incidents.map((incident) => (
+                <MenuItem key={incident.id} value={incident.id ? incident.id.toString() : ""}>
+                  {`Incident ${incident.id} - ${incident.n_alerts} alerts`}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
           {/* Incident Details List */}
           <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
             Incident Details
           </Typography>
           <List sx={{ flex: 1, overflowY: "auto", pr: 2 }}>
-            {incidents.map((incident) => (
-              <ListItem key={incident.id} disablePadding>
+            {incidentDetails.map((alert) => (
+              <ListItem key={alert.id} disablePadding>
                 <ListItemButton
-                  selected={selectedIncident === incident.id.toString()}
-                  onClick={() => setSelectedIncident(incident.id.toString())}
+                  selected={selectedIncident === alert.id.toString()}
+                  onClick={() => setSelectedIncident(alert.id.toString())}
                   sx={{
-                    backgroundColor: selectedIncident === incident.id.toString() ? "#e3f2fd" : "white",
+                    backgroundColor: selectedIncident === alert.id.toString() ? "#e3f2fd" : "white",
                     borderRadius: 1,
                     mb: 1,
                     "&:hover": { backgroundColor: "#e3f2fd" },
                   }}
                 >
                   <Checkbox
-                    checked={selectedIncident === incident.id.toString()}
+                    checked={selectedIncident === alert.id.toString()}
                     sx={{ p: 0, color: "#1976d2" }}
                   />
                   <ListItemText
-                    primary={`Incident ${incident.id}`}
-                    secondary={`Alerts: ${incident.n_alerts}`}
+                    primary={`Incident ID: ${alert.id}`}
+                    secondary={
+                      <>
+                        <Typography variant="body2" color="text.secondary">
+                          <strong>Identifier:</strong> {alert.identifier}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          <strong>Description:</strong> {alert.description}
+                        </Typography>
+                      </>
+                    }
                   />
                 </ListItemButton>
               </ListItem>
             ))}
           </List>
+
+          {/* Summarize Button */}
+          <Button
+            variant="contained"
+            color="success"
+            onClick={summarizeIncident}
+            sx={{ fontWeight: "bold", width: "100%", height: 40, mt: 2 }}
+          >
+            Summarize
+          </Button>
         </Paper>
 
         {/* Right Panel: Summary */}
