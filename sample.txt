@@ -1,162 +1,53 @@
-import React, { useState } from "react";
-import {
-  Container, TextField, Button, MenuItem, Select, FormControl, InputLabel,
-  Typography, Box, Paper
-} from "@mui/material";
-import Grid2 from "@mui/material/Unstable_Grid2"; // Import Grid2
-import api from "./api"; // Import Axios instance
+<Grid2 container spacing={2} sx={{ height: "80vh", mt: 2 }}>
+  {/* Left Section - Inputs & Incidents */}
+  <Grid2 xs={12} sm={6} sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+    <Paper elevation={3} sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column", overflowY: "auto" }}>
+      {/* Input Fields */}
+      <TextField label="alert_threshold" fullWidth variant="outlined" value={alertThreshold} onChange={(e) => setAlertThreshold(e.target.value)} sx={{ mb: 2 }} />
+      <TextField label="n_records" fullWidth variant="outlined" value={nRecords} onChange={(e) => setNRecords(e.target.value)} sx={{ mb: 2 }} />
+      <Button variant="contained" color="secondary" onClick={fetchIncidents} sx={{ fontWeight: "bold", width: "100%", mb: 2 }}>Get Incidents</Button>
 
-const App = () => {
-  const [alertThreshold, setAlertThreshold] = useState("10");
-  const [nRecords, setNRecords] = useState("20");
-  const [incidents, setIncidents] = useState([]);
-  const [selectedIncident, setSelectedIncident] = useState("");
-  const [incidentDetails, setIncidentDetails] = useState([]);
-  const [summarizedDetails, setSummarizedDetails] = useState(null);
+      {/* Incident Dropdown */}
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <InputLabel>DD Incidents</InputLabel>
+        <Select value={selectedIncident || ""} onChange={(e) => handleIncidentSelect(e.target.value)} sx={{ backgroundColor: "white" }}>
+          {Array.isArray(incidents) && incidents.map((incident) => (
+            <MenuItem key={incident.id} value={incident.id?.toString() || ""}>
+              {`Incident ${incident.id} - ${incident.n_alerts} alerts`}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
 
-  const fetchIncidents = async () => {
-    try {
-      const response = await api.get("/ais/v1/incidents", {
-        params: { alert_threshold: alertThreshold, n_records: nRecords }
-      });
-      setIncidents(Array.isArray(response.data) ? response.data : []);
-    } catch (error) {
-      console.error("Error fetching incidents:", error);
-      setIncidents([]);
-    }
-  };
+      {/* Incident Details */}
+      <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>Incident Details</Typography>
+      <Box sx={{ flex: 1, overflowY: "auto", pr: 2 }}>
+        {incidentDetails.map((alert) => (
+          <Box key={alert.id} sx={{ backgroundColor: "white", borderRadius: 1, p: 2, mb: 2, boxShadow: 1 }}>
+            <Typography variant="subtitle1" fontWeight="bold">Incident ID: {alert.id}</Typography>
+            <Typography variant="body2"><strong>Identifier:</strong> {alert.identifier}</Typography>
+            <Typography variant="body2"><strong>Description:</strong> {alert.description}</Typography>
+          </Box>
+        ))}
+      </Box>
+    </Paper>
+  </Grid2>
 
-  const handleIncidentSelect = async (incidentId) => {
-    setSelectedIncident(incidentId);
-    try {
-      const response = await api.get(`/ais/v1/incidents/${incidentId}/description`);
-      setIncidentDetails(response.data);
-    } catch (error) {
-      console.error("Error fetching incident details:", error);
-      setIncidentDetails([]);
-    }
-  };
-
-  const summarizeIncident = async () => {
-    if (!selectedIncident) return;
-    try {
-      const response = await api.get(`/ais/v1/incidents/${selectedIncident}/summarize`);
-      setSummarizedDetails(response.data);
-    } catch (error) {
-      console.error("Error summarizing incident:", error);
-      setSummarizedDetails(null);
-    }
-  };
-
-  return (
-    <Container maxWidth="xl" sx={{ mt: 5, height: "100vh" }}>
-      <Typography variant="h4" textAlign="center" fontWeight="bold" color="primary" gutterBottom>
-        Advanced Incident Summarization
-      </Typography>
-
-      {/* Main Grid Container */}
-      <Grid2 container spacing={2} sx={{ height: "80vh", mt: 2 }}>
-        {/* Left Section */}
-        <Grid2 xs={12} md={6} sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-          <Paper elevation={3} sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column", overflowY: "auto" }}>
-            {/* Input Fields */}
-            <TextField
-              label="alert_threshold"
-              fullWidth
-              variant="outlined"
-              value={alertThreshold}
-              onChange={(e) => setAlertThreshold(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              label="n_records"
-              fullWidth
-              variant="outlined"
-              value={nRecords}
-              onChange={(e) => setNRecords(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <Button variant="contained" color="secondary" onClick={fetchIncidents} sx={{ fontWeight: "bold", width: "100%", mb: 2 }}>
-              Get Incidents
-            </Button>
-
-            {/* Incident Dropdown */}
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel>DD Incidents</InputLabel>
-              <Select
-                value={selectedIncident || ""}
-                onChange={(e) => handleIncidentSelect(e.target.value)}
-                sx={{ backgroundColor: "white" }}
-              >
-                {Array.isArray(incidents) && incidents.map((incident) => (
-                  <MenuItem key={incident.id} value={incident.id?.toString() || ""}>
-                    {`Incident ${incident.id} - ${incident.n_alerts} alerts`}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            {/* Incident Details */}
-            <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
-              Incident Details
-            </Typography>
-            <Box sx={{ flex: 1, overflowY: "auto", pr: 2 }}>
-              {incidentDetails.map((alert) => (
-                <Box
-                  key={alert.id}
-                  sx={{
-                    backgroundColor: selectedIncident === alert.id.toString() ? "#e3f2fd" : "white",
-                    borderRadius: 1,
-                    p: 2,
-                    mb: 2,
-                    boxShadow: 1,
-                    cursor: "pointer",
-                    "&:hover": { backgroundColor: "#e3f2fd" }
-                  }}
-                >
-                  <Typography variant="subtitle1" fontWeight="bold">
-                    Incident ID: {alert.id}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Identifier:</strong> {alert.identifier}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Description:</strong> {alert.description}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-          </Paper>
-        </Grid2>
-
-        {/* Right Section */}
-        <Grid2 xs={12} md={6} sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-          <Paper elevation={3} sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column", overflowY: "auto" }}>
-            <Button variant="contained" color="success" onClick={summarizeIncident} sx={{ fontWeight: "bold", width: "100%", mb: 2 }}>
-              Summarize
-            </Button>
-            <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
-              Summarized Details
-            </Typography>
-            <Box sx={{ flex: 1, overflowY: "auto", pr: 2 }}>
-              {summarizedDetails ? (
-                <Box sx={{ backgroundColor: "white", borderRadius: 1, p: 2, mb: 2, boxShadow: 1 }}>
-                  <Typography variant="subtitle1" fontWeight="bold">
-                    Summary: {summarizedDetails.summary}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Key Points:</strong> {summarizedDetails.keyPoints}
-                  </Typography>
-                </Box>
-              ) : (
-                <Typography sx={{ mt: 1, fontStyle: "italic" }}>No summarized details available</Typography>
-              )}
-            </Box>
-          </Paper>
-        </Grid2>
-      </Grid2>
-    </Container>
-  );
-};
-
-export default App;
+  {/* Right Section - Summary */}
+  <Grid2 xs={12} sm={6} sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+    <Paper elevation={3} sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column", overflowY: "auto" }}>
+      <Button variant="contained" color="success" onClick={summarizeIncident} sx={{ fontWeight: "bold", width: "100%", mb: 2 }}>Summarize</Button>
+      <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>Summarized Details</Typography>
+      <Box sx={{ flex: 1, overflowY: "auto", pr: 2 }}>
+        {summarizedDetails ? (
+          <Box sx={{ backgroundColor: "white", borderRadius: 1, p: 2, mb: 2, boxShadow: 1 }}>
+            <Typography variant="subtitle1" fontWeight="bold">Summary: {summarizedDetails.summary}</Typography>
+            <Typography variant="body2"><strong>Key Points:</strong> {summarizedDetails.keyPoints}</Typography>
+          </Box>
+        ) : (
+          <Typography sx={{ mt: 1, fontStyle: "italic" }}>No summarized details available</Typography>
+        )}
+      </Box>
+    </Paper>
+  </Grid2>
+</Grid2>
