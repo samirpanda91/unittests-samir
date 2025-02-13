@@ -67,118 +67,114 @@ const App = () => {
         Advanced Incident Summarization
       </Typography>
 
-      <Grid2 container spacing={2} sx={{ height: "80vh", mt: 2, width: "100%" }}>
-        <Grid2 xs={6} sx={{ height: "100%", display: "flex", flexDirection: "column", width: "50%" }}>
-          <Paper elevation={3} sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", width: "100%" }}>
-            <TextField
-              label="alert_threshold"
-              fullWidth
-              variant="outlined"
-              value={alertThreshold}
-              onChange={(e) => setAlertThreshold(e.target.value)}
-              sx={{ backgroundColor: "white", borderRadius: 1, mb: 2, "& .MuiInputBase-root": { height: 40 } }}
-            />
-            <TextField
-              label="n_records"
-              fullWidth
-              variant="outlined"
-              value={nRecords}
-              onChange={(e) => setNRecords(e.target.value)}
-              sx={{ backgroundColor: "white", borderRadius: 1, mb: 2, "& .MuiInputBase-root": { height: 40 } }}
-            />
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={fetchIncidents}
-              sx={{ fontWeight: "bold", width: "100%", height: 40, mb: 2 }}
+      <Box sx={{ display: "flex", height: "80vh", mt: 2, gap: 2 }}>
+        <Paper elevation={3} sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", width: "48%" }}>
+          <TextField
+            label="alert_threshold"
+            fullWidth
+            variant="outlined"
+            value={alertThreshold}
+            onChange={(e) => setAlertThreshold(e.target.value)}
+            sx={{ backgroundColor: "white", borderRadius: 1, mb: 2, "& .MuiInputBase-root": { height: 40 } }}
+          />
+          <TextField
+            label="n_records"
+            fullWidth
+            variant="outlined"
+            value={nRecords}
+            onChange={(e) => setNRecords(e.target.value)}
+            sx={{ backgroundColor: "white", borderRadius: 1, mb: 2, "& .MuiInputBase-root": { height: 40 } }}
+          />
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={fetchIncidents}
+            sx={{ fontWeight: "bold", width: "100%", height: 40, mb: 2 }}
+          >
+            Get Incidents
+          </Button>
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel shrink sx={{ backgroundColor: "white", px: 1 }}>
+              DD Incidents
+            </InputLabel>
+            <Select
+              value={selectedIncident || ""}
+              onChange={(e) => handleIncidentSelect(e.target.value)}
+              sx={{ backgroundColor: "white", borderRadius: 1, "& .MuiInputBase-root": { height: 40 } }}
+              MenuProps={{ PaperProps: { sx: { maxHeight: 200, marginTop: 1 } } }}
             >
-              Get Incidents
-            </Button>
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel shrink sx={{ backgroundColor: "white", px: 1 }}>
-                DD Incidents
-              </InputLabel>
-              <Select
-                value={selectedIncident || ""}
-                onChange={(e) => handleIncidentSelect(e.target.value)}
-                sx={{ backgroundColor: "white", borderRadius: 1, "& .MuiInputBase-root": { height: 40 } }}
-                MenuProps={{ PaperProps: { sx: { maxHeight: 200, marginTop: 1 } } }}
-              >
-                {Array.isArray(incidents) && incidents.map((incident) => (
-                  <MenuItem key={incident.id} value={incident.id ? incident.id.toString() : ""}>
-                    {`Incident ${incident.id} - ${incident.n_alerts} alerts`}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            {isDropdownPopulated && (
-              <Alert severity="info" sx={{ mb: 2 }}>
-                Dropdown is populated. Please select an incident.
-              </Alert>
-            )}
-            <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
-              Incident Details
-            </Typography>
-            <Box sx={{ flex: 1, overflowY: "auto", pr: 2 }}>
-              {incidentDetails.map((alert) => (
-                <Box
-                  key={alert.id}
-                  onClick={() => setSelectedIncident(alert.id.toString())}
-                  sx={{
-                    backgroundColor: selectedIncident === alert.id.toString() ? "#e3f2fd" : "white",
-                    borderRadius: 1,
-                    p: 2,
-                    mb: 2,
-                    boxShadow: 1,
-                    cursor: "pointer",
-                    "&:hover": { backgroundColor: "#e3f2fd" }
-                  }}
-                >
-                  <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
-                    Incident ID: {alert.id}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    <strong>Identifier:</strong> {alert.identifier}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    <strong>Description:</strong> {alert.description}
-                  </Typography>
-                </Box>
+              {Array.isArray(incidents) && incidents.map((incident) => (
+                <MenuItem key={incident.id} value={incident.id ? incident.id.toString() : ""}>
+                  {`Incident ${incident.id} - ${incident.n_alerts} alerts`}
+                </MenuItem>
               ))}
-            </Box>
-          </Paper>
-        </Grid2>
+            </Select>
+          </FormControl>
+          {isDropdownPopulated && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Dropdown is populated. Please select an incident.
+            </Alert>
+          )}
+          <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
+            Incident Details
+          </Typography>
+          <Box sx={{ flex: 1, overflowY: "auto", pr: 2 }}>
+            {incidentDetails.map((alert) => (
+              <Box
+                key={alert.id}
+                onClick={() => setSelectedIncident(alert.id.toString())}
+                sx={{
+                  backgroundColor: selectedIncident === alert.id.toString() ? "#e3f2fd" : "white",
+                  borderRadius: 1,
+                  p: 2,
+                  mb: 2,
+                  boxShadow: 1,
+                  cursor: "pointer",
+                  "&:hover": { backgroundColor: "#e3f2fd" }
+                }}
+              >
+                <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
+                  Incident ID: {alert.id}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  <strong>Identifier:</strong> {alert.identifier}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  <strong>Description:</strong> {alert.description}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        </Paper>
 
-        <Grid2 xs={6} sx={{ height: "100%", display: "flex", flexDirection: "column", width: "50%" }}>
-          <Paper elevation={3} sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", width: "100%" }}>
-            <Button
-              variant="contained"
-              color="success"
-              onClick={summarizeIncident}
-              sx={{ fontWeight: "bold", width: "100%", height: 40, mb: 2 }}
-            >
-              Summarize
-            </Button>
-            <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
-              Summarized Details
-            </Typography>
-            <Box sx={{ flex: 1, overflowY: "auto", pr: 2 }}>
-              {summarizedDetails ? (
-                <Box sx={{ backgroundColor: "white", borderRadius: 1, p: 2, mb: 2, boxShadow: 1 }}>
-                  <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
-                    Summary: {summarizedDetails.summary}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    <strong>Key Points:</strong> {summarizedDetails.keyPoints}
-                  </Typography>
-                </Box>
-              ) : (
-                <Typography sx={{ mt: 1, fontStyle: "italic" }}>No summarized details available</Typography>
-              )}
-            </Box>
-          </Paper>
-        </Grid2>
-      </Grid2>
+        <Paper elevation={3} sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", width: "48%" }}>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={summarizeIncident}
+            sx={{ fontWeight: "bold", width: "100%", height: 40, mb: 2 }}
+          >
+            Summarize
+          </Button>
+          <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
+            Summarized Details
+          </Typography>
+          <Box sx={{ flex: 1, overflowY: "auto", pr: 2 }}>
+            {summarizedDetails ? (
+              <Box sx={{ backgroundColor: "white", borderRadius: 1, p: 2, mb: 2, boxShadow: 1 }}>
+                <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
+                  Summary: {summarizedDetails.summary}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  <strong>Key Points:</strong> {summarizedDetails.keyPoints}
+                </Typography>
+              </Box>
+            ) : (
+              <Typography sx={{ mt: 1, fontStyle: "italic" }}>No summarized details available</Typography>
+            )}
+          </Box>
+        </Paper>
+      </Box>
     </Container>
   );
 };
