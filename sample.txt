@@ -23,6 +23,12 @@ const App = () => {
       });
       console.log("API Response:", response.data); // Debug the response
       setIncidents(Array.isArray(response.data) ? response.data : []); // Ensure incidents is an array
+
+      // Automatically select the first incident in the dropdown
+      if (Array.isArray(response.data) && response.data.length > 0) {
+        setSelectedIncident(response.data[0].id.toString());
+        handleIncidentSelect(response.data[0].id.toString()); // Fetch details for the first incident
+      }
     } catch (error) {
       console.error("Error fetching incidents:", error);
       setIncidents([]); // Set incidents to an empty array on error
