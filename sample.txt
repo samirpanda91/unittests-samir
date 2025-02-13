@@ -61,7 +61,7 @@ const App = () => {
 
       <Grid2 container spacing={4} sx={{ height: "80vh", mt: 2 }}>
         {/* Left Side: Input Fields, Get Incidents Button, Dropdown, and Incident Details */}
-        <Grid2 xs={6}>
+        <Grid2 xs={6} sx={{ height: "100%" }}>
           <Paper elevation={3} sx={{ p: 3, height: "100%", overflowY: "auto" }}>
             <Grid2 container spacing={2}>
               {/* Input Fields */}
@@ -178,7 +178,7 @@ const App = () => {
         </Grid2>
 
         {/* Right Side: Summarize Button and Summarized Details */}
-        <Grid2 xs={6}>
+        <Grid2 xs={6} sx={{ height: "100%" }}>
           <Paper elevation={3} sx={{ p: 3, height: "100%", overflowY: "auto" }}>
             <Grid2 container spacing={2}>
               <Grid2 xs={12} sx={{ textAlign: "center" }}>
