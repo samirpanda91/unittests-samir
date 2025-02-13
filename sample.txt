@@ -7,62 +7,57 @@ import Grid2 from "@mui/material/Unstable_Grid2"; // Import Grid2
 import api from "./api"; // Import Axios instance
 
 const App = () => {
-  // Initialize with default values
   const [alertThreshold, setAlertThreshold] = useState("10");
   const [nRecords, setNRecords] = useState("20");
   const [incidents, setIncidents] = useState([]);
   const [selectedIncident, setSelectedIncident] = useState("");
-  const [incidentDetails, setIncidentDetails] = useState([]); // Store incident details
-  const [summarizedDetails, setSummarizedDetails] = useState(null); // Store summarized details
+  const [incidentDetails, setIncidentDetails] = useState([]);
+  const [summarizedDetails, setSummarizedDetails] = useState(null);
 
-  // Fetch incidents from API
   const fetchIncidents = async () => {
     try {
       const response = await api.get("/ais/v1/incidents", {
         params: { alert_threshold: alertThreshold, n_records: nRecords }
       });
-      console.log("API Response:", response.data); // Debug the response
-      setIncidents(Array.isArray(response.data) ? response.data : []); // Ensure incidents is an array
+      setIncidents(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Error fetching incidents:", error);
-      setIncidents([]); // Set incidents to an empty array on error
+      setIncidents([]);
     }
   };
 
-  // Fetch incident details when an incident is selected
   const handleIncidentSelect = async (incidentId) => {
     setSelectedIncident(incidentId);
     try {
       const response = await api.get(`/ais/v1/incidents/${incidentId}/description`);
-      setIncidentDetails(response.data); // Store incident details
+      setIncidentDetails(response.data);
     } catch (error) {
       console.error("Error fetching incident details:", error);
-      setIncidentDetails([]); // Clear incident details on error
+      setIncidentDetails([]);
     }
   };
 
-  // Summarize the selected incident
   const summarizeIncident = async () => {
     if (!selectedIncident) return;
     try {
       const response = await api.get(`/ais/v1/incidents/${selectedIncident}/summarize`);
-      setSummarizedDetails(response.data); // Store summarized details
+      setSummarizedDetails(response.data);
     } catch (error) {
       console.error("Error summarizing incident:", error);
-      setSummarizedDetails(null); // Clear summarized details on error
+      setSummarizedDetails(null);
     }
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 5, height: "100vh" }}>
+    <Container maxWidth="xl" sx={{ mt: 5, height: "100vh" }}>
       <Typography variant="h4" textAlign="center" fontWeight="bold" color="primary" gutterBottom>
         Advanced Incident Summarization
       </Typography>
 
       {/* Main Grid Container */}
       <Grid2 container spacing={2} sx={{ height: "80vh", mt: 2 }}>
-        {/* Left Side: Input Fields, Get Incidents Button, Dropdown, and Incident Details */}
-        <Grid2 xs={6} sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+        {/* Left Section */}
+        <Grid2 xs={12} md={6} sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
           <Paper elevation={3} sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column", overflowY: "auto" }}>
             {/* Input Fields */}
             <TextField
@@ -71,12 +66,7 @@ const App = () => {
               variant="outlined"
               value={alertThreshold}
               onChange={(e) => setAlertThreshold(e.target.value)}
-              sx={{ 
-                backgroundColor: "white", 
-                borderRadius: 1, 
-                mb: 2,
-                "& .MuiInputBase-root": { height: 40 } // Reduce height of text field
-              }}
+              sx={{ mb: 2 }}
             />
             <TextField
               label="n_records"
@@ -84,46 +74,22 @@ const App = () => {
               variant="outlined"
               value={nRecords}
               onChange={(e) => setNRecords(e.target.value)}
-              sx={{ 
-                backgroundColor: "white", 
-                borderRadius: 1, 
-                mb: 2,
-                "& .MuiInputBase-root": { height: 40 } // Reduce height of text field
-              }}
+              sx={{ mb: 2 }}
             />
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={fetchIncidents}
-              sx={{ fontWeight: "bold", width: "100%", height: 40, mb: 2 }} // Set width to 100%
-            >
+            <Button variant="contained" color="secondary" onClick={fetchIncidents} sx={{ fontWeight: "bold", width: "100%", mb: 2 }}>
               Get Incidents
             </Button>
 
-            {/* Dropdown for Incidents */}
+            {/* Incident Dropdown */}
             <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel shrink sx={{ backgroundColor: "white", px: 1 }}>
-                DD Incidents
-              </InputLabel>
+              <InputLabel>DD Incidents</InputLabel>
               <Select
-                value={selectedIncident || ""} // Fallback to empty string if undefined
+                value={selectedIncident || ""}
                 onChange={(e) => handleIncidentSelect(e.target.value)}
-                sx={{ 
-                  backgroundColor: "white", 
-                  borderRadius: 1,
-                  "& .MuiInputBase-root": { height: 40 }, // Reduce height of dropdown
-                }}
-                MenuProps={{
-                  PaperProps: {
-                    sx: {
-                      maxHeight: 200, // Add scrollbar after 200px height
-                      marginTop: 1, // Start dropdown just below the label
-                    },
-                  },
-                }}
+                sx={{ backgroundColor: "white" }}
               >
                 {Array.isArray(incidents) && incidents.map((incident) => (
-                  <MenuItem key={incident.id} value={incident.id ? incident.id.toString() : ""}>
+                  <MenuItem key={incident.id} value={incident.id?.toString() || ""}>
                     {`Incident ${incident.id} - ${incident.n_alerts} alerts`}
                   </MenuItem>
                 ))}
@@ -138,7 +104,6 @@ const App = () => {
               {incidentDetails.map((alert) => (
                 <Box
                   key={alert.id}
-                  onClick={() => setSelectedIncident(alert.id.toString())} // Make incident clickable
                   sx={{
                     backgroundColor: selectedIncident === alert.id.toString() ? "#e3f2fd" : "white",
                     borderRadius: 1,
@@ -149,13 +114,13 @@ const App = () => {
                     "&:hover": { backgroundColor: "#e3f2fd" }
                   }}
                 >
-                  <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
+                  <Typography variant="subtitle1" fontWeight="bold">
                     Incident ID: {alert.id}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  <Typography variant="body2">
                     <strong>Identifier:</strong> {alert.identifier}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  <Typography variant="body2">
                     <strong>Description:</strong> {alert.description}
                   </Typography>
                 </Box>
@@ -164,15 +129,10 @@ const App = () => {
           </Paper>
         </Grid2>
 
-        {/* Right Side: Summarize Button and Summarized Details */}
-        <Grid2 xs={6} sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+        {/* Right Section */}
+        <Grid2 xs={12} md={6} sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
           <Paper elevation={3} sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column", overflowY: "auto" }}>
-            <Button
-              variant="contained"
-              color="success"
-              onClick={summarizeIncident}
-              sx={{ fontWeight: "bold", width: "100%", height: 40, mb: 2 }} // Increase width and set height of button
-            >
+            <Button variant="contained" color="success" onClick={summarizeIncident} sx={{ fontWeight: "bold", width: "100%", mb: 2 }}>
               Summarize
             </Button>
             <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
@@ -180,19 +140,11 @@ const App = () => {
             </Typography>
             <Box sx={{ flex: 1, overflowY: "auto", pr: 2 }}>
               {summarizedDetails ? (
-                <Box
-                  sx={{
-                    backgroundColor: "white",
-                    borderRadius: 1,
-                    p: 2,
-                    mb: 2,
-                    boxShadow: 1,
-                  }}
-                >
-                  <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
+                <Box sx={{ backgroundColor: "white", borderRadius: 1, p: 2, mb: 2, boxShadow: 1 }}>
+                  <Typography variant="subtitle1" fontWeight="bold">
                     Summary: {summarizedDetails.summary}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  <Typography variant="body2">
                     <strong>Key Points:</strong> {summarizedDetails.keyPoints}
                   </Typography>
                 </Box>
