@@ -1,49 +1,66 @@
 import React, { useState } from "react";
 import {
-  Container, TextField, Button, Typography, Box, Paper, List, ListItem, ListItemText, ListItemButton, Checkbox,
-  MenuItem, Select, FormControl, InputLabel, Alert
+  Container,
+  TextField,
+  Button,
+  Typography,
+  Box,
+  Paper,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
 } from "@mui/material";
+import api from "./api"; // Ensure this is your API utility
 
 const App = () => {
   const [alertThreshold, setAlertThreshold] = useState("10");
   const [nRecords, setNRecords] = useState("20");
   const [incidents, setIncidents] = useState([]);
   const [selectedIncident, setSelectedIncident] = useState("");
-  const [incidentDetails, setIncidentDetails] = useState([]);
+  const [incidentDetails, setIncidentDetails] = useState("");
+  const [strategy, setStrategy] = useState("");
   const [summary, setSummary] = useState(null);
-  const [isDataFetched, setIsDataFetched] = useState(false); // New state for showing message
+  const [loading, setLoading] = useState(false); // Loading state
 
+  // Fetch incidents from API
   const fetchIncidents = async () => {
+    setLoading(true);
     try {
       const response = await api.get("/ais/v1/incidents", {
-        params: { alert_threshold: alertThreshold, n_records: nRecords }
+        params: { alert_threshold: alertThreshold, n_records: nRecords },
       });
-      const fetchedIncidents = Array.isArray(response.data) ? response.data : [];
-      setIncidents(fetchedIncidents);
-      setIsDataFetched(true); // Set to true when data is fetched
+      setIncidents(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Error fetching incidents:", error);
       setIncidents([]);
-      setIsDataFetched(false); // Reset if there's an error
     }
+    setLoading(false);
   };
 
+  // Fetch incident details when an incident is selected
   const handleIncidentSelect = async (incidentId) => {
     setSelectedIncident(incidentId);
     try {
       const response = await api.get(`/ais/v1/incidents/${incidentId}/description`);
-      setIncidentDetails(response.data);
+      const descriptions = response.data.map((item) => item.description).join("\n");
+      setIncidentDetails(descriptions);
     } catch (error) {
       console.error("Error fetching incident details:", error);
-      setIncidentDetails([]);
+      setIncidentDetails("");
     }
   };
 
+  // Summarize the selected incident
   const summarizeIncident = async () => {
-    if (!selectedIncident) return;
+    if (!selectedIncident || !incidentDetails || !strategy) return;
+
     try {
-      const response = await api.get(`/ais/v1/incidents/${selectedIncident}/summarize`);
-      setSummary(response.data);
+      const response = await api.post(
+        `/ais/v1/summarize?incident_id=${selectedIncident}&strategy=${strategy}`,
+        { content: incidentDetails } // Sending incident details as JSON body
+      );
+      setSummary(response.data.summary);
     } catch (error) {
       console.error("Error summarizing incident:", error);
       setSummary(null);
@@ -51,139 +68,114 @@ const App = () => {
   };
 
   return (
-    <Container maxWidth={false} sx={{ mt: 5, height: "100vh", width: "100%", p: 0 }}>
+    <Container maxWidth={false} sx={{ mt: 5, height: "95vh", p: 8 }}>
       <Typography variant="h4" textAlign="center" fontWeight="bold" color="primary" gutterBottom>
         Advanced Incident Summarization
       </Typography>
 
-      <Box sx={{ display: "flex", height: "80vh", mt: 2, gap: 2 }}>
+      <Box sx={{ display: "flex", height: "88vh", mt: 2, gap: 2 }}>
         {/* Left Panel */}
-        <Paper elevation={3} sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", width: "48%" }}>
-          {/* Input Fields in One Line */}
-          <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+        <Paper elevation={3} sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column" }}>
+          
+          {/* Input Fields */}
+          <Box sx={{ display: "flex", gap: 2, mb: 2, justifyContent: "center" }}>
             <TextField
-              label="alert_threshold"
-              fullWidth
+              label="Alert Threshold"
               variant="outlined"
               value={alertThreshold}
               onChange={(e) => setAlertThreshold(e.target.value)}
-              sx={{ backgroundColor: "white", borderRadius: 1, "& .MuiInputBase-root": { height: 40 } }}
+              sx={{ backgroundColor: "white", width: "39%" }}
             />
             <TextField
-              label="n_records"
-              fullWidth
+              label="Number of Records"
               variant="outlined"
               value={nRecords}
               onChange={(e) => setNRecords(e.target.value)}
-              sx={{ backgroundColor: "white", borderRadius: 1, "& .MuiInputBase-root": { height: 40 } }}
+              sx={{ backgroundColor: "white", width: "39%" }}
             />
           </Box>
 
-          {/* Get Incidents Button */}
-          <Button
-            variant="contained"
-            color="secondary"
-            onClick={fetchIncidents}
-            sx={{ fontWeight: "bold", width: "100%", height: 40, mb: 2 }}
-          >
-            Get Incidents
-          </Button>
+          {/* Buttons */}
+          <Box sx={{ display: "flex", gap: 2, mb: 2, justifyContent: "center" }}>
+            <Button
+              variant="contained"
+              color="success"
+              onClick={fetchIncidents}
+              sx={{ fontWeight: "bold", width: "20%", height: 48 }}
+              disabled={loading}
+            >
+              {loading ? "Fetching..." : "Get Incidents"}
+            </Button>
 
-          {/* Message After Fetching Data */}
-          {isDataFetched && (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              Incident data has been successfully fetched.
-            </Alert>
-          )}
+            <Button
+              variant="contained"
+              color="success"
+              onClick={summarizeIncident}
+              sx={{ fontWeight: "bold", width: "20%", height: 48 }}
+              disabled={!incidentDetails || !strategy}
+            >
+              Summarize
+            </Button>
+          </Box>
 
           {/* Dropdown for Incidents */}
           <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel shrink sx={{ backgroundColor: "white", px: 1 }}>
-              DD Incidents
-            </InputLabel>
+            <InputLabel>Incidents</InputLabel>
             <Select
               value={selectedIncident || ""}
               onChange={(e) => handleIncidentSelect(e.target.value)}
-              sx={{ backgroundColor: "white", borderRadius: 1, "& .MuiInputBase-root": { height: 40 } }}
-              MenuProps={{ PaperProps: { sx: { maxHeight: 200, marginTop: 1 } } }}
+              disabled={loading || incidents.length === 0} // Disable when fetching
+              sx={{ backgroundColor: "white", borderRadius: 1 }}
             >
               {incidents.map((incident) => (
-                <MenuItem key={incident.id} value={incident.id ? incident.id.toString() : ""}>
-                  {`Incident ${incident.id} - ${incident.n_alerts} alerts`}
+                <MenuItem key={incident.incident_id} value={incident.incident_id}>
+                  {`Incident ${incident.incident_id} - ${incident.n_alerts} alerts`}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
 
-          {/* Incident Details List */}
-          <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
-            Incident Details
-          </Typography>
-          <List sx={{ flex: 1, overflowY: "auto", pr: 2 }}>
-            {incidentDetails.map((alert) => (
-              <ListItem key={alert.id} disablePadding>
-                <ListItemButton
-                  selected={selectedIncident === alert.id.toString()}
-                  onClick={() => setSelectedIncident(alert.id.toString())}
-                  sx={{
-                    backgroundColor: selectedIncident === alert.id.toString() ? "#e3f2fd" : "white",
-                    borderRadius: 1,
-                    mb: 1,
-                    "&:hover": { backgroundColor: "#e3f2fd" },
-                  }}
-                >
-                  <Checkbox
-                    checked={selectedIncident === alert.id.toString()}
-                    sx={{ p: 0, color: "#1976d2" }}
-                  />
-                  <ListItemText
-                    primary={`Incident ID: ${alert.id}`}
-                    secondary={
-                      <>
-                        <Typography variant="body2" color="text.secondary">
-                          <strong>Identifier:</strong> {alert.identifier}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          <strong>Description:</strong> {alert.description}
-                        </Typography>
-                      </>
-                    }
-                  />
-                </ListItemButton>
-              </ListItem>
-            ))}
-          </List>
+          {/* Incident Details (Editable Text Area) */}
+          <TextField
+            label="Incident Details"
+            multiline
+            rows={8}
+            fullWidth
+            variant="outlined"
+            value={incidentDetails}
+            onChange={(e) => setIncidentDetails(e.target.value)}
+            sx={{ backgroundColor: "white", borderRadius: 1 }}
+          />
 
-          {/* Summarize Button */}
-          <Button
-            variant="contained"
-            color="success"
-            onClick={summarizeIncident}
-            sx={{ fontWeight: "bold", width: "100%", height: 40, mt: 2 }}
-          >
-            Summarize
-          </Button>
+          {/* Summarization Strategy Dropdown */}
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel>Summarization Strategy</InputLabel>
+            <Select
+              value={strategy}
+              onChange={(e) => setStrategy(e.target.value)}
+              sx={{ backgroundColor: "white", borderRadius: 1 }}
+            >
+              <MenuItem value="Nltk">Nltk</MenuItem>
+              <MenuItem value="pytestparser">pytestparser</MenuItem>
+            </Select>
+          </FormControl>
         </Paper>
 
         {/* Right Panel: Summary */}
-        <Paper elevation={3} sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column", overflowY: "auto", width: "48%" }}>
+        <Paper elevation={3} sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column" }}>
           <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
-            Summary
+            Summarized Incident
           </Typography>
-          <Box sx={{ flex: 1, overflowY: "auto", pr: 2 }}>
-            {summary ? (
-              <Box sx={{ backgroundColor: "white", borderRadius: 1, p: 2, mb: 2, boxShadow: 1 }}>
-                <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
-                  Summary: {summary.summary}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  <strong>Key Points:</strong> {summary.keyPoints}
-                </Typography>
-              </Box>
-            ) : (
-              <Typography sx={{ mt: 1, fontStyle: "italic" }}>No summary available</Typography>
-            )}
-          </Box>
+
+          <TextField
+            multiline
+            rows={6}
+            fullWidth
+            variant="outlined"
+            value={summary || ""}
+            disabled
+            sx={{ backgroundColor: "white", borderRadius: 1 }}
+          />
         </Paper>
       </Box>
     </Container>
