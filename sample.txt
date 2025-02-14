@@ -77,54 +77,77 @@ const App = () => {
         {/* Left Panel */}
         <Paper elevation={3} sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column" }}>
           
-          {/* Input Fields */}
-          <Box sx={{ display: "flex", gap: 2, mb: 2, justifyContent: "center" }}>
-            <TextField
-              label="Alert Threshold"
-              variant="outlined"
-              value={alertThreshold}
-              onChange={(e) => setAlertThreshold(e.target.value)}
-              sx={{ backgroundColor: "white", width: "39%" }}
-            />
-            <TextField
-              label="Number of Records"
-              variant="outlined"
-              value={nRecords}
-              onChange={(e) => setNRecords(e.target.value)}
-              sx={{ backgroundColor: "white", width: "39%" }}
-            />
-          </Box>
+          {/* Two Equal Boxes */}
+          <Box sx={{ display: "flex", gap: 2 }}>
+            {/* Box 1: Alert Threshold + Get Incidents */}
+            <Paper elevation={2} sx={{ flex: 1, p: 2, backgroundColor: "#f0f0f0" }}>
+              <Typography variant="h6" color="primary" fontWeight="bold" gutterBottom>
+                Incident Retrieval
+              </Typography>
+              <TextField
+                label="Alert Threshold"
+                variant="outlined"
+                fullWidth
+                value={alertThreshold}
+                onChange={(e) => setAlertThreshold(e.target.value)}
+                sx={{ backgroundColor: "white", mb: 2 }}
+              />
+              <TextField
+                label="Number of Records"
+                variant="outlined"
+                fullWidth
+                value={nRecords}
+                onChange={(e) => setNRecords(e.target.value)}
+                sx={{ backgroundColor: "white", mb: 2 }}
+              />
+              <Button
+                variant="contained"
+                color="success"
+                onClick={fetchIncidents}
+                fullWidth
+                sx={{ fontWeight: "bold" }}
+                disabled={loading}
+              >
+                {loading ? "Fetching..." : "Get Incidents"}
+              </Button>
+            </Paper>
 
-          {/* Buttons */}
-          <Box sx={{ display: "flex", gap: 2, mb: 2, justifyContent: "center" }}>
-            <Button
-              variant="contained"
-              color="success"
-              onClick={fetchIncidents}
-              sx={{ fontWeight: "bold", width: "20%", height: 48 }}
-              disabled={loading}
-            >
-              {loading ? "Fetching..." : "Get Incidents"}
-            </Button>
-
-            <Button
-              variant="contained"
-              color="success"
-              onClick={summarizeIncident}
-              sx={{ fontWeight: "bold", width: "20%", height: 48 }}
-              disabled={!incidentDetails || !strategy}
-            >
-              Summarize
-            </Button>
+            {/* Box 2: Summarization Strategy + Summarize Button */}
+            <Paper elevation={2} sx={{ flex: 1, p: 2, backgroundColor: "#e3f2fd" }}>
+              <Typography variant="h6" color="primary" fontWeight="bold" gutterBottom>
+                Summarization
+              </Typography>
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel>Summarization Strategy</InputLabel>
+                <Select
+                  value={strategy}
+                  onChange={(e) => setStrategy(e.target.value)}
+                  sx={{ backgroundColor: "white" }}
+                >
+                  <MenuItem value="Nltk">Nltk</MenuItem>
+                  <MenuItem value="pytestparser">pytestparser</MenuItem>
+                </Select>
+              </FormControl>
+              <Button
+                variant="contained"
+                color="success"
+                fullWidth
+                sx={{ fontWeight: "bold" }}
+                onClick={summarizeIncident}
+                disabled={!selectedIncident || !strategy}
+              >
+                Summarize
+              </Button>
+            </Paper>
           </Box>
 
           {/* Dropdown for Incidents */}
-          <FormControl fullWidth sx={{ mb: 2 }}>
+          <FormControl fullWidth sx={{ mt: 2 }}>
             <InputLabel>Incidents</InputLabel>
             <Select
               value={selectedIncident || ""}
               onChange={(e) => handleIncidentSelect(e.target.value)}
-              disabled={loading || incidents.length === 0} // Disable when fetching
+              disabled={loading || incidents.length === 0} // Disabled when fetching
               sx={{ backgroundColor: "white", borderRadius: 1 }}
             >
               {incidents.map((incident) => (
@@ -144,21 +167,8 @@ const App = () => {
             variant="outlined"
             value={incidentDetails}
             onChange={(e) => setIncidentDetails(e.target.value)}
-            sx={{ backgroundColor: "white", borderRadius: 1 }}
+            sx={{ backgroundColor: "white", borderRadius: 1, mt: 2 }}
           />
-
-          {/* Summarization Strategy Dropdown */}
-          <FormControl fullWidth sx={{ mt: 2 }}>
-            <InputLabel>Summarization Strategy</InputLabel>
-            <Select
-              value={strategy}
-              onChange={(e) => setStrategy(e.target.value)}
-              sx={{ backgroundColor: "white", borderRadius: 1 }}
-            >
-              <MenuItem value="Nltk">Nltk</MenuItem>
-              <MenuItem value="pytestparser">pytestparser</MenuItem>
-            </Select>
-          </FormControl>
         </Paper>
 
         {/* Right Panel: Summary */}
