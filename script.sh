@@ -1,15 +1,22 @@
-<FormControl fullWidth sx={{ mt: 2 }}>
-  <InputLabel>Incidents</InputLabel>
-  <Select
-    value={selectedIncident || ""}
-    onChange={handleIncidentSelect} // Fix applied
-    disabled={loading || incidents.length === 0} // Disable when fetching
-    sx={{ backgroundColor: "white", borderRadius: 1 }}
-  >
-    {incidents.map((incident) => (
-      <MenuItem key={incident.incident_id} value={incident.incident_id}>
-        {`Incident ${incident.incident_id} - ${incident.n_alerts} alerts`}
-      </MenuItem>
-    ))}
-  </Select>
-</FormControl>
+<TextField
+  variant="outlined"
+  fullWidth
+  placeholder="Enter details here..."
+  sx={{
+    backgroundColor: "white",
+    borderRadius: 1,
+    border: "1px solid #ADD8E6", // Light blue border
+    "& .MuiOutlinedInput-root": {
+      "& fieldset": {
+        borderColor: "#ADD8E6", // Default border
+      },
+      "&:hover fieldset": {
+        borderColor: "#ADD8E6", // Prevents dark blue on hover
+      },
+      "&.Mui-focused fieldset": {
+        borderColor: "#ADD8E6", // Prevents dark blue when focused
+        boxShadow: "0 0 0 2px rgba(173, 216, 230, 0.3)", // Soft blue glow
+      },
+    },
+  }}
+/>
