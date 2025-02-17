@@ -1,195 +1,70 @@
-import React, { useState } from "react";
-import {
-  Container,
-  TextField,
-  Button,
-  Typography,
-  Box,
-  Paper,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-} from "@mui/material";
-import api from "./api"; // Ensure this is your API utility
+import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 
-const App = () => {
-  const [alertThreshold, setAlertThreshold] = useState("10");
-  const [nRecords, setNRecords] = useState("20");
-  const [incidents, setIncidents] = useState([]);
-  const [selectedIncident, setSelectedIncident] = useState("");
-  const [incidentDetails, setIncidentDetails] = useState("");
-  const [strategy, setStrategy] = useState("");
-  const [summary, setSummary] = useState(null);
-  const [loading, setLoading] = useState(false); // Loading state
+const data = [
+  { name: "Original Words", value: 147 },
+  { name: "Summary Words", value: 44 },
+];
 
-  // Fetch incidents from API
-  const fetchIncidents = async () => {
-    setLoading(true);
-    try {
-      const response = await api.get("/ais/v1/incidents", {
-        params: { alert_threshold: alertThreshold, n_records: nRecords },
-      });
-      setIncidents(Array.isArray(response.data) ? response.data : []);
-    } catch (error) {
-      console.error("Error fetching incidents:", error);
-      setIncidents([]);
-    }
-    setLoading(false);
-  };
+const COLORS = ["#0088FE", "#FFBB28"]; // Blue for original, yellow for summarized
 
-  // Fetch incident details when an incident is selected
-  const handleIncidentSelect = async (incidentId) => {
-    setSelectedIncident(incidentId);
-    try {
-      const response = await api.get(`/ais/v1/incidents/${incidentId}/description`);
-      const descriptions = response.data.map((item) => item.description).join("\n");
-      setIncidentDetails(descriptions);
-    } catch (error) {
-      console.error("Error fetching incident details:", error);
-      setIncidentDetails("");
-    }
-  };
+const SummaryChart = () => (
+  <PieChart width={300} height={300}>
+    <Pie
+      data={data}
+      cx="50%"
+      cy="50%"
+      innerRadius={60}
+      outerRadius={80}
+      fill="#8884d8"
+      dataKey="value"
+      label
+    >
+      {data.map((entry, index) => (
+        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+      ))}
+    </Pie>
+    <Tooltip />
+    <Legend />
+  </PieChart>
+);
 
-  // Summarize the selected incident
-  const summarizeIncident = async () => {
-    if (!selectedIncident || !incidentDetails || !strategy) return;
+export default SummaryChart;
 
-    try {
-      const response = await api.post(
-        `/ais/v1/summarize?incident_id=${selectedIncident}&strategy=${strategy}`,
-        { content: incidentDetails } // Sending incident details as JSON body
-      );
-      setSummary(response.data.summary);
-    } catch (error) {
-      console.error("Error summarizing incident:", error);
-      setSummary(null);
-    }
-  };
 
-  return (
-    <Container maxWidth={false} sx={{ mt: 5, height: "95vh", p: 8 }}>
-      <Typography variant="h4" textAlign="center" fontWeight="bold" color="primary" gutterBottom>
-        Advanced Incident Summarization
-      </Typography>
 
-      <Box sx={{ display: "flex", height: "88vh", mt: 2, gap: 2 }}>
-        {/* Left Panel */}
-        <Paper elevation={3} sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column" }}>
-          
-          {/* Two Equal Boxes */}
-          <Box sx={{ display: "flex", gap: 2 }}>
-            {/* Box 1: Alert Threshold + Get Incidents */}
-            <Paper elevation={2} sx={{ flex: 1, p: 2, backgroundColor: "#f0f0f0" }}>
-              <Typography variant="h6" color="primary" fontWeight="bold" gutterBottom>
-                Incident Retrieval
-              </Typography>
-              <TextField
-                label="Alert Threshold"
-                variant="outlined"
-                fullWidth
-                value={alertThreshold}
-                onChange={(e) => setAlertThreshold(e.target.value)}
-                sx={{ backgroundColor: "white", mb: 2 }}
-              />
-              <TextField
-                label="Number of Records"
-                variant="outlined"
-                fullWidth
-                value={nRecords}
-                onChange={(e) => setNRecords(e.target.value)}
-                sx={{ backgroundColor: "white", mb: 2 }}
-              />
-              <Button
-                variant="contained"
-                color="success"
-                onClick={fetchIncidents}
-                fullWidth
-                sx={{ fontWeight: "bold" }}
-                disabled={loading}
-              >
-                {loading ? "Fetching..." : "Get Incidents"}
-              </Button>
-            </Paper>
 
-            {/* Box 2: Summarization Strategy + Summarize Button */}
-            <Paper elevation={2} sx={{ flex: 1, p: 2, backgroundColor: "#e3f2fd" }}>
-              <Typography variant="h6" color="primary" fontWeight="bold" gutterBottom>
-                Summarization
-              </Typography>
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Summarization Strategy</InputLabel>
-                <Select
-                  value={strategy}
-                  onChange={(e) => setStrategy(e.target.value)}
-                  sx={{ backgroundColor: "white" }}
-                >
-                  <MenuItem value="Nltk">Nltk</MenuItem>
-                  <MenuItem value="pytestparser">pytestparser</MenuItem>
-                </Select>
-              </FormControl>
-              <Button
-                variant="contained"
-                color="success"
-                fullWidth
-                sx={{ fontWeight: "bold" }}
-                onClick={summarizeIncident}
-                disabled={!selectedIncident || !strategy}
-              >
-                Summarize
-              </Button>
-            </Paper>
-          </Box>
+import { Box, Typography, LinearProgress } from "@mui/material";
 
-          {/* Dropdown for Incidents */}
-          <FormControl fullWidth sx={{ mt: 2 }}>
-            <InputLabel>Incidents</InputLabel>
-            <Select
-              value={selectedIncident || ""}
-              onChange={(e) => handleIncidentSelect(e.target.value)}
-              disabled={loading || incidents.length === 0} // Disabled when fetching
-              sx={{ backgroundColor: "white", borderRadius: 1 }}
-            >
-              {incidents.map((incident) => (
-                <MenuItem key={incident.incident_id} value={incident.incident_id}>
-                  {`Incident ${incident.incident_id} - ${incident.n_alerts} alerts`}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+const ProgressBars = () => (
+  <Box sx={{ width: "100%", p: 2 }}>
+    <Typography>Word Reduction</Typography>
+    <LinearProgress variant="determinate" value={(44 / 147) * 100} />
+    <Typography mt={2}>Sentence Reduction</Typography>
+    <LinearProgress variant="determinate" value={(2 / 8) * 100} />
+  </Box>
+);
 
-          {/* Incident Details (Editable Text Area) */}
-          <TextField
-            label="Incident Details"
-            multiline
-            rows={8}
-            fullWidth
-            variant="outlined"
-            value={incidentDetails}
-            onChange={(e) => setIncidentDetails(e.target.value)}
-            sx={{ backgroundColor: "white", borderRadius: 1, mt: 2 }}
-          />
-        </Paper>
+export default ProgressBars;
 
-        {/* Right Panel: Summary */}
-        <Paper elevation={3} sx={{ p: 3, flex: 1, display: "flex", flexDirection: "column" }}>
-          <Typography variant="h6" fontWeight="bold" color="primary" gutterBottom>
-            Summarized Incident
-          </Typography>
 
-          <TextField
-            multiline
-            rows={6}
-            fullWidth
-            variant="outlined"
-            value={summary || ""}
-            disabled
-            sx={{ backgroundColor: "white", borderRadius: 1 }}
-          />
-        </Paper>
-      </Box>
-    </Container>
-  );
-};
 
-export default App;
+import { Box, Typography } from "@mui/material";
+import DescriptionIcon from "@mui/icons-material/Description";
+
+const SummaryStats = () => (
+  <Box sx={{ display: "flex", flexDirection: "row", gap: 3 }}>
+    <Box sx={{ textAlign: "center" }}>
+      <DescriptionIcon fontSize="large" color="primary" />
+      <Typography>Words: 147 → 44</Typography>
+    </Box>
+    <Box sx={{ textAlign: "center" }}>
+      <DescriptionIcon fontSize="large" color="secondary" />
+      <Typography>Sentences: 8 → 2</Typography>
+    </Box>
+  </Box>
+);
+
+export default SummaryStats;
+
+
+
