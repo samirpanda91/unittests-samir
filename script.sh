@@ -1,70 +1,33 @@
-import requests
-from requests_ntlm import HttpNtlmAuth
-import snowflake.connector
+import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 
-# Proxy configuration
-proxy_url = 'http://your-proxy-server:port'  # Replace with your proxy server
-proxy_username = 'DOMAIN\\username'  # Replace with your AD username (format: DOMAIN\username)
-proxy_password = 'your-password'  # Replace with your AD password
+const COLORS = ["#0088FE", "#FFBB28"]; // Blue for original, Yellow for summarized
 
-# Snowflake connection details
-snowflake_user = 'your-snowflake-username'
-snowflake_password = 'your-snowflake-password'
-snowflake_account = 'your-account'  # Replace with your Snowflake account identifier
-snowflake_warehouse = 'your-warehouse'
-snowflake_database = 'your-database'
-snowflake_schema = 'your-schema'
-snowflake_role = 'your-role'
+const SummaryChart = ({ stats }) => {
+  if (!stats) return null; // Don't render if no data
 
-# Target URL to test the proxy (Snowflake endpoint)
-target_url = f'https://{snowflake_account}.snowflakecomputing.com'
+  const data = [
+    { name: "Original Words", value: stats.text.words },
+    { name: "Summary Words", value: stats.summary.words },
+  ];
 
-# Step 1: Verify Proxy with AD Credentials
-def verify_proxy():
-    print("Verifying proxy with AD credentials...")
-    session = requests.Session()
-    session.proxies = {
-        'http': proxy_url,
-        'https': proxy_url,
-    }
-    session.auth = HttpNtlmAuth(proxy_username, proxy_password)
-
-    try:
-        response = session.get(target_url)
-        print("Proxy verification successful!")
-        print("Status Code:", response.status_code)
-        return True
-    except requests.exceptions.RequestException as e:
-        print("Proxy verification failed:", e)
-        return False
-
-# Step 2: Connect to Snowflake Using Proxy
-def connect_to_snowflake():
-    print("Connecting to Snowflake...")
-    try:
-        # Configure the Snowflake Connector to use the proxy
-        conn = snowflake.connector.connect(
-            user=snowflake_user,
-            password=snowflake_password,
-            account=snowflake_account,
-            warehouse=snowflake_warehouse,
-            database=snowflake_database,
-            schema=snowflake_schema,
-            role=snowflake_role,
-            proxy=proxy_url  # Pass the proxy configuration
-        )
-
-        # Test the connection
-        cursor = conn.cursor()
-        cursor.execute("SELECT CURRENT_VERSION()")
-        result = cursor.fetchone()
-        print("Snowflake Version:", result[0])
-        cursor.close()
-        conn.close()
-    except snowflake.connector.errors.Error as e:
-        print("Failed to connect to Snowflake:", e)
-
-# Main Execution
-if __name__ == "__main__":
-    if verify_proxy():
-        connect_to_snowflake()
+  return (
+    <PieChart width={300} height={300}>
+      <Pie
+        data={data}
+        cx="50%"
+        cy="50%"
+        innerRadius={60}
+        outerRadius={80}
+        fill="#8884d8"
+        dataKey="value"
+        label
+      >
+        {data.map((entry, index) => (
+          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+        ))}
+      </Pie>
+      <Tooltip />
+      <Legend />
+    </PieChart>
+  );
+};
