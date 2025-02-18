@@ -1,186 +1,29 @@
-import React, { useState } from "react";
-import {
-  Container,
-  TextField,
-  Button,
-  Typography,
-  Box,
-  Paper,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-} from "@mui/material";
-import api from "./api"; // Ensure this is your API utility
-import "./index.css"; // Import the external CSS file
+/* Styles for Multiline TextField */
+.multiline-textbox {
+  background-color: white !important;
+  border-radius: 8px !important;
+}
 
-const App = () => {
-  const [alertThreshold, setAlertThreshold] = useState("10");
-  const [nRecords, setNRecords] = useState("20");
-  const [incidents, setIncidents] = useState([]);
-  const [selectedIncident, setSelectedIncident] = useState("");
-  const [incidentDetails, setIncidentDetails] = useState("");
-  const [strategy, setStrategy] = useState("");
-  const [summary, setSummary] = useState(null);
-  const [loading, setLoading] = useState(false);
+/* Adjust Height */
+.multiline-textbox .MuiInputBase-root {
+  height: auto !important; /* Auto-adjusts to rows */
+}
 
-  // Fetch incidents from API
-  const fetchIncidents = async () => {
-    setLoading(true);
-    try {
-      const response = await api.get("/ais/v1/incidents", {
-        params: { alert_threshold: alertThreshold, n_records: nRecords },
-      });
-      setIncidents(Array.isArray(response.data) ? response.data : []);
-    } catch (error) {
-      console.error("Error fetching incidents:", error);
-      setIncidents([]);
-    }
-    setLoading(false);
-  };
+/* Set Minimum and Maximum Height */
+.multiline-textbox .MuiInputBase-input {
+  min-height: 400px !important; /* Adjust based on rows */
+  max-height: 600px !important; /* Optional: Prevents excessive height */
+  overflow-y: auto !important; /* Enables scrolling */
+}
 
-  // Fetch incident details when an incident is selected
-  const handleIncidentSelect = async (incidentId) => {
-    setSelectedIncident(incidentId);
-    try {
-      const response = await api.get(`/ais/v1/incidents/${incidentId}/description`);
-      const descriptions = response.data.map((item) => item.description).join("\n");
-      setIncidentDetails(descriptions);
-    } catch (error) {
-      console.error("Error fetching incident details:", error);
-      setIncidentDetails("");
-    }
-  };
+/* Customize the Border */
+.multiline-textbox .MuiOutlinedInput-root {
+  border: 1px solid #ccc !important;
+  transition: border-color 0.3s ease-in-out;
+}
 
-  // Summarize the selected incident
-  const summarizeIncident = async () => {
-    if (!selectedIncident || !incidentDetails || !strategy) return;
-
-    try {
-      const response = await api.post(
-        `/ais/v1/summarize?incident_id=${selectedIncident}&strategy=${strategy}`,
-        { content: incidentDetails } // Sending incident details as JSON body
-      );
-      setSummary(response.data.summary);
-    } catch (error) {
-      console.error("Error summarizing incident:", error);
-      setSummary(null);
-    }
-  };
-
-  return (
-    <Container maxWidth={false} className="container">
-      <Typography variant="h4" className="heading">
-        Advanced Incident Summarization
-      </Typography>
-
-      <Box className="main-box">
-        {/* Left Panel */}
-        <Paper elevation={3} className="panel">
-          {/* Two Equal Boxes */}
-          <Box className="box-container">
-            {/* Box 1: Alert Threshold + Get Incidents */}
-            <Paper elevation={2} className="box box-gray">
-              <Typography variant="h6" color="primary" fontWeight="bold">
-                Incident Retrieval
-              </Typography>
-              <TextField
-                label="Alert Threshold"
-                variant="outlined"
-                className="full-width textarea mb-2"
-                value={alertThreshold}
-                onChange={(e) => setAlertThreshold(e.target.value)}
-              />
-              <TextField
-                label="Number of Records"
-                variant="outlined"
-                className="full-width textarea mb-2"
-                value={nRecords}
-                onChange={(e) => setNRecords(e.target.value)}
-              />
-              <Button
-                variant="contained"
-                className="button button-success full-width"
-                onClick={fetchIncidents}
-                disabled={loading}
-              >
-                {loading ? "Fetching..." : "Get Incidents"}
-              </Button>
-            </Paper>
-
-            {/* Box 2: Summarization Strategy + Summarize Button */}
-            <Paper elevation={2} className="box box-blue">
-              <Typography variant="h6" color="primary" fontWeight="bold">
-                Summarization
-              </Typography>
-              <FormControl className="full-width mb-2">
-                <InputLabel>Summarization Strategy</InputLabel>
-                <Select
-                  value={strategy}
-                  onChange={(e) => setStrategy(e.target.value)}
-                  className="textarea"
-                >
-                  <MenuItem value="Nltk">Nltk</MenuItem>
-                  <MenuItem value="pytestparser">pytestparser</MenuItem>
-                </Select>
-              </FormControl>
-              <Button
-                variant="contained"
-                className="button button-success full-width"
-                onClick={summarizeIncident}
-                disabled={!selectedIncident || !strategy}
-              >
-                Summarize
-              </Button>
-            </Paper>
-          </Box>
-
-          {/* Dropdown for Incidents */}
-          <FormControl className="full-width mt-2">
-            <InputLabel>Incidents</InputLabel>
-            <Select
-              value={selectedIncident || ""}
-              onChange={(e) => handleIncidentSelect(e.target.value)}
-              disabled={loading || incidents.length === 0}
-              className="textarea"
-            >
-              {incidents.map((incident) => (
-                <MenuItem key={incident.incident_id} value={incident.incident_id}>
-                  {`Incident ${incident.incident_id} - ${incident.n_alerts} alerts`}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          {/* Incident Details */}
-          <TextField
-            label="Incident Details"
-            multiline
-            rows={8}
-            className="full-width textarea mt-2"
-            variant="outlined"
-            value={incidentDetails}
-            onChange={(e) => setIncidentDetails(e.target.value)}
-          />
-        </Paper>
-
-        {/* Right Panel: Summary */}
-        <Paper elevation={3} className="panel">
-          <Typography variant="h6" fontWeight="bold" color="primary">
-            Summarized Incident
-          </Typography>
-          <TextField
-            multiline
-            rows={6}
-            className="full-width textarea"
-            variant="outlined"
-            value={summary || ""}
-            disabled
-          />
-        </Paper>
-      </Box>
-    </Container>
-  );
-};
-
-export default App;
+/* Highlight on Focus */
+.multiline-textbox .MuiOutlinedInput-root.Mui-focused {
+  border-color: #1976d2 !important; /* Change to primary color */
+  box-shadow: 0 0 5px rgba(25, 118, 210, 0.5);
+}
