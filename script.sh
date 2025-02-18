@@ -1,80 +1,84 @@
-/* Global styles */
 .container {
-  margin-top: 40px; /* mt: 5 (5 * 8px = 40px) */
-  height: 95vh;
-  padding: 64px; /* p: 8 (8 * 8px = 64px) */
+  max-width: 100%;
+  padding: 16px;
 }
 
-.heading {
+.header-title {
   text-align: center;
   font-weight: bold;
-  color: #1976d2; /* Primary color in MUI */
+  color: #1976d2;
   margin-bottom: 16px;
 }
 
 .main-box {
   display: flex;
-  height: 88vh;
-  margin-top: 16px; /* mt: 2 (2 * 8px = 16px) */
+  height: 78vh;
+  margin-top: 16px;
   gap: 16px;
 }
 
-/* Left and Right Panel */
-.panel {
-  padding: 24px; /* p: 3 (3 * 8px = 24px) */
+.left-panel {
   flex: 1;
+  padding: 16px;
   display: flex;
   flex-direction: column;
 }
 
-/* Small Boxes */
-.box-container {
+.incident-box {
   display: flex;
   gap: 16px;
 }
 
-.box {
+.incident-retrieval,
+.summarization-box {
   flex: 1;
-  padding: 16px; /* p: 2 (2 * 8px = 16px) */
+  padding: 16px;
+  background-color: #f5f5f5;
 }
 
-.box-gray {
-  background-color: #f0f0f0;
-}
-
-.box-blue {
-  background-color: #e3f2fd;
-}
-
-/* Dropdown and Inputs */
-.full-width {
-  width: 100%;
-}
-
-.mt-2 {
-  margin-top: 16px;
-}
-
-.mb-2 {
+.text-field {
+  background-color: white;
   margin-bottom: 16px;
 }
 
-/* Buttons */
-.button {
+.get-incidents-btn,
+.summarize-btn {
   font-weight: bold;
+  color: black;
+  background-color: rgb(250, 192, 33);
 }
 
-.button-success {
-  background-color: #4caf50;
-  color: white;
+.dropdown {
+  margin-top: 16px;
 }
 
-.button-success:hover {
-  background-color: #388e3c;
-}
-
-/* Incident Details & Summary */
-.textarea {
+.incident-details {
   background-color: white;
-  border-radius: 8px;
+  border-radius: 4px;
+  margin-top: 16px;
+}
+
+.summary-panel {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.summary-stats {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.summary-text {
+  background-color: white;
+  border-radius: 4px;
+  margin-top: 16px;
 }
