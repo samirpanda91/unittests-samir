@@ -1,70 +1,186 @@
-import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
+import React, { useState } from "react";
+import {
+  Container,
+  TextField,
+  Button,
+  Typography,
+  Box,
+  Paper,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+} from "@mui/material";
+import api from "./api"; // Ensure this is your API utility
+import "./index.css"; // Import the external CSS file
 
-const data = [
-  { name: "Original Words", value: 147 },
-  { name: "Summary Words", value: 44 },
-];
+const App = () => {
+  const [alertThreshold, setAlertThreshold] = useState("10");
+  const [nRecords, setNRecords] = useState("20");
+  const [incidents, setIncidents] = useState([]);
+  const [selectedIncident, setSelectedIncident] = useState("");
+  const [incidentDetails, setIncidentDetails] = useState("");
+  const [strategy, setStrategy] = useState("");
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-const COLORS = ["#0088FE", "#FFBB28"]; // Blue for original, yellow for summarized
+  // Fetch incidents from API
+  const fetchIncidents = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get("/ais/v1/incidents", {
+        params: { alert_threshold: alertThreshold, n_records: nRecords },
+      });
+      setIncidents(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error("Error fetching incidents:", error);
+      setIncidents([]);
+    }
+    setLoading(false);
+  };
 
-const SummaryChart = () => (
-  <PieChart width={300} height={300}>
-    <Pie
-      data={data}
-      cx="50%"
-      cy="50%"
-      innerRadius={60}
-      outerRadius={80}
-      fill="#8884d8"
-      dataKey="value"
-      label
-    >
-      {data.map((entry, index) => (
-        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-      ))}
-    </Pie>
-    <Tooltip />
-    <Legend />
-  </PieChart>
-);
+  // Fetch incident details when an incident is selected
+  const handleIncidentSelect = async (incidentId) => {
+    setSelectedIncident(incidentId);
+    try {
+      const response = await api.get(`/ais/v1/incidents/${incidentId}/description`);
+      const descriptions = response.data.map((item) => item.description).join("\n");
+      setIncidentDetails(descriptions);
+    } catch (error) {
+      console.error("Error fetching incident details:", error);
+      setIncidentDetails("");
+    }
+  };
 
-export default SummaryChart;
+  // Summarize the selected incident
+  const summarizeIncident = async () => {
+    if (!selectedIncident || !incidentDetails || !strategy) return;
 
+    try {
+      const response = await api.post(
+        `/ais/v1/summarize?incident_id=${selectedIncident}&strategy=${strategy}`,
+        { content: incidentDetails } // Sending incident details as JSON body
+      );
+      setSummary(response.data.summary);
+    } catch (error) {
+      console.error("Error summarizing incident:", error);
+      setSummary(null);
+    }
+  };
 
+  return (
+    <Container maxWidth={false} className="container">
+      <Typography variant="h4" className="heading">
+        Advanced Incident Summarization
+      </Typography>
 
+      <Box className="main-box">
+        {/* Left Panel */}
+        <Paper elevation={3} className="panel">
+          {/* Two Equal Boxes */}
+          <Box className="box-container">
+            {/* Box 1: Alert Threshold + Get Incidents */}
+            <Paper elevation={2} className="box box-gray">
+              <Typography variant="h6" color="primary" fontWeight="bold">
+                Incident Retrieval
+              </Typography>
+              <TextField
+                label="Alert Threshold"
+                variant="outlined"
+                className="full-width textarea mb-2"
+                value={alertThreshold}
+                onChange={(e) => setAlertThreshold(e.target.value)}
+              />
+              <TextField
+                label="Number of Records"
+                variant="outlined"
+                className="full-width textarea mb-2"
+                value={nRecords}
+                onChange={(e) => setNRecords(e.target.value)}
+              />
+              <Button
+                variant="contained"
+                className="button button-success full-width"
+                onClick={fetchIncidents}
+                disabled={loading}
+              >
+                {loading ? "Fetching..." : "Get Incidents"}
+              </Button>
+            </Paper>
 
-import { Box, Typography, LinearProgress } from "@mui/material";
+            {/* Box 2: Summarization Strategy + Summarize Button */}
+            <Paper elevation={2} className="box box-blue">
+              <Typography variant="h6" color="primary" fontWeight="bold">
+                Summarization
+              </Typography>
+              <FormControl className="full-width mb-2">
+                <InputLabel>Summarization Strategy</InputLabel>
+                <Select
+                  value={strategy}
+                  onChange={(e) => setStrategy(e.target.value)}
+                  className="textarea"
+                >
+                  <MenuItem value="Nltk">Nltk</MenuItem>
+                  <MenuItem value="pytestparser">pytestparser</MenuItem>
+                </Select>
+              </FormControl>
+              <Button
+                variant="contained"
+                className="button button-success full-width"
+                onClick={summarizeIncident}
+                disabled={!selectedIncident || !strategy}
+              >
+                Summarize
+              </Button>
+            </Paper>
+          </Box>
 
-const ProgressBars = () => (
-  <Box sx={{ width: "100%", p: 2 }}>
-    <Typography>Word Reduction</Typography>
-    <LinearProgress variant="determinate" value={(44 / 147) * 100} />
-    <Typography mt={2}>Sentence Reduction</Typography>
-    <LinearProgress variant="determinate" value={(2 / 8) * 100} />
-  </Box>
-);
+          {/* Dropdown for Incidents */}
+          <FormControl className="full-width mt-2">
+            <InputLabel>Incidents</InputLabel>
+            <Select
+              value={selectedIncident || ""}
+              onChange={(e) => handleIncidentSelect(e.target.value)}
+              disabled={loading || incidents.length === 0}
+              className="textarea"
+            >
+              {incidents.map((incident) => (
+                <MenuItem key={incident.incident_id} value={incident.incident_id}>
+                  {`Incident ${incident.incident_id} - ${incident.n_alerts} alerts`}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-export default ProgressBars;
+          {/* Incident Details */}
+          <TextField
+            label="Incident Details"
+            multiline
+            rows={8}
+            className="full-width textarea mt-2"
+            variant="outlined"
+            value={incidentDetails}
+            onChange={(e) => setIncidentDetails(e.target.value)}
+          />
+        </Paper>
 
+        {/* Right Panel: Summary */}
+        <Paper elevation={3} className="panel">
+          <Typography variant="h6" fontWeight="bold" color="primary">
+            Summarized Incident
+          </Typography>
+          <TextField
+            multiline
+            rows={6}
+            className="full-width textarea"
+            variant="outlined"
+            value={summary || ""}
+            disabled
+          />
+        </Paper>
+      </Box>
+    </Container>
+  );
+};
 
-
-import { Box, Typography } from "@mui/material";
-import DescriptionIcon from "@mui/icons-material/Description";
-
-const SummaryStats = () => (
-  <Box sx={{ display: "flex", flexDirection: "row", gap: 3 }}>
-    <Box sx={{ textAlign: "center" }}>
-      <DescriptionIcon fontSize="large" color="primary" />
-      <Typography>Words: 147 → 44</Typography>
-    </Box>
-    <Box sx={{ textAlign: "center" }}>
-      <DescriptionIcon fontSize="large" color="secondary" />
-      <Typography>Sentences: 8 → 2</Typography>
-    </Box>
-  </Box>
-);
-
-export default SummaryStats;
-
-
-
+export default App;
