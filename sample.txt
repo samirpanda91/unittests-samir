@@ -1,29 +1,161 @@
-/* Styles for Multiline TextField */
-.multiline-textbox {
-  background-color: white !important;
-  border-radius: 8px !important;
-}
+  return (
+    <Container className="container">
+      {/* Header */}
+      <Typography variant="h4" className="header-title">
+        Advanced Incident Summarization
+      </Typography>
 
-/* Adjust Height */
-.multiline-textbox .MuiInputBase-root {
-  height: auto !important; /* Auto-adjusts to rows */
-}
+      <Box className="main-box">
+        {/* Left Panel */}
+        <Paper elevation={4} className="left-panel">
+          <Box className="incident-box">
+            {/* Incident Retrieval */}
+            <Paper elevation={3} className="incident-retrieval">
+              <Typography variant="h6" className="title">
+                Incident Retrieval
+              </Typography>
+              <TextField
+                label="Alert Threshold"
+                variant="outlined"
+                fullWidth
+                value={alertThreshold}
+                onChange={(e) => setAlertThreshold(e.target.value)}
+                className="text-field"
+              />
+              <TextField
+                label="No. of Records"
+                variant="outlined"
+                fullWidth
+                value={nRecords}
+                onChange={(e) => setNRecords(e.target.value)}
+                className="text-field"
+              />
+              <Button
+                variant="contained"
+                onClick={fetchIncidents}
+                fullWidth
+                className="get-incidents-btn"
+                disabled={loading}
+              >
+                {loading ? "Fetching..." : "Get Incidents"}
+              </Button>
+            </Paper>
 
-/* Set Minimum and Maximum Height */
-.multiline-textbox .MuiInputBase-input {
-  min-height: 400px !important; /* Adjust based on rows */
-  max-height: 600px !important; /* Optional: Prevents excessive height */
-  overflow-y: auto !important; /* Enables scrolling */
-}
+            {/* Summarization Strategy */}
+            <Paper elevation={3} className="summarization-box">
+              <Typography variant="h6" className="title">
+                Summarization
+              </Typography>
+              <FormControl fullWidth className="form-control">
+                <InputLabel shrink>Strategy</InputLabel>
+                <Select
+                  variant="outlined"
+                  value={strategy}
+                  onChange={(e) => setStrategy(e.target.value)}
+                  className="select-field"
+                >
+                  <MenuItem value="nltk">NLTK</MenuItem>
+                  <MenuItem value="pytextrank">PyTextRank</MenuItem>
+                </Select>
+              </FormControl>
+              <Button
+                variant="contained"
+                color="success"
+                fullWidth
+                className="summarize-btn"
+                onClick={summarizeIncident}
+                disabled={!selectedIncident || !strategy}
+              >
+                Summarize
+              </Button>
+            </Paper>
+          </Box>
 
-/* Customize the Border */
-.multiline-textbox .MuiOutlinedInput-root {
-  border: 1px solid #ccc !important;
-  transition: border-color 0.3s ease-in-out;
-}
+          {/* Dropdown for Incidents */}
+          {incidents.length > 0 && (
+            <FormControl fullWidth className="dropdown">
+              <InputLabel shrink>Incidents</InputLabel>
+              <Select
+                value={selectedIncident || ""}
+                onChange={(e) => setSelectedIncident(e.target.value)}
+                disabled={loading || incidents.length === 0}
+              >
+                {incidents.map((incident) => (
+                  <MenuItem key={incident.id} value={incident.id}>
+                    Incident {incident.id} - {incident.n_alerts} alerts
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
 
-/* Highlight on Focus */
-.multiline-textbox .MuiOutlinedInput-root.Mui-focused {
-  border-color: #1976d2 !important; /* Change to primary color */
-  box-shadow: 0 0 5px rgba(25, 118, 210, 0.5);
-}
+          {/* Incident Details */}
+          {selectedIncident && (
+            <TextField
+              label="Incident Details"
+              multiline
+              rows={14}
+              fullWidth
+              variant="outlined"
+              value={incidentDetails}
+              onChange={(e) => setIncidentDetails(e.target.value)}
+              className="incident-details"
+            />
+          )}
+        </Paper>
+
+        {/* Right Panel (Summary) */}
+        <Paper elevation={4} className="summary-panel">
+          <Typography variant="h6" className="title">
+            Summary
+          </Typography>
+
+          {summaryStats && (
+            <Box className="summary-stats">
+              <Box className="stat-item">
+                <DescriptionIcon fontSize="small" color="primary" />
+                <Typography>
+                  Words: {summaryStats.text?.sentences} →{" "}
+                  {summaryStats.summary?.words}
+                </Typography>
+              </Box>
+              <Box className="stat-item">
+                <DescriptionIcon fontSize="small" color="secondary" />
+                <Typography>
+                  Sentences: {summaryStats.text?.sentences} →{" "}
+                  {summaryStats.summary?.sentences}
+                </Typography>
+              </Box>
+              <Box className="stat-item">
+                <DescriptionIcon fontSize="small" color="primary" />
+                <Typography>
+                  Limit Phrase: {summaryStats.params?.limit_phrases}
+                </Typography>
+              </Box>
+              <Box className="stat-item">
+                <DescriptionIcon fontSize="small" color="secondary" />
+                <Typography>
+                  Limit Sentences: {summaryStats.params?.limit_sentences}
+                </Typography>
+              </Box>
+            </Box>
+          )}
+
+          {summary && (
+            <TextField
+              label="Summary"
+              multiline
+              rows={24}
+              fullWidth
+              variant="outlined"
+              value={summary || "No data available to summarize"}
+              className="summary-text"
+            />
+          )}
+        </Paper>
+      </Box>
+    </Container>
+  );
+};
+
+export default IncidentSummarization;
