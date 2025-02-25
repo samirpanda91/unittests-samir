@@ -1,16 +1,17 @@
-import pytest
-from aiops_purl.version import __version__
+import subprocess
+import sys
+from pathlib import Path
 
 def test_version():
+    from aiops_purl.version import __version__
     assert isinstance(__version__, str)
     assert __version__ == "0.5.2"
 
-def test_main_print_output(capfd):
+def test_main_print_output():
     """Test the output of `if __name__ == '__main__'` block"""
-    from aiops_purl.version import __name__ as module_name
+    script_path = Path(__file__).parent.parent / "aiops_purl" / "version.py"
 
-    if module_name == "__main__":
-        print(__version__)
+    result = subprocess.run([sys.executable, str(script_path)], capture_output=True, text=True)
 
-    captured = capfd.readouterr()  # Capture printed output
-    assert captured.out.strip() == "0.5.2"
+    assert result.returncode == 0  # Ensure the script runs successfully
+    assert result.stdout.strip() == "0.5.2"  # Check expected output
