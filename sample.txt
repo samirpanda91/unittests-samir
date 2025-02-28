@@ -1,66 +1,36 @@
 import pytest
-import tempfile
-import os
 import toml
 from unittest.mock import patch, MagicMock
 from pathlib import Path
 from your_module import Kafka_sync, Aiops_config  # Replace 'your_module' with the actual module name
 
-# Create a temporary test config file
 @pytest.fixture
-def temp_toml_file():
-    """Creates a temporary TOML configuration file."""
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".toml")
-    toml_content = {
-        "environment": {"env": []},
-        "config_items": {
-            "src": {
-                "topics": [
-                    "bpan.observability.restful.rau",
-                    "bpan.observability.snmp.raw",
-                    "bpan.observability.socket.rau",
-                ],
-                "kafka_environment": "uat-consumer",
-                "consumer_group": "bpan-observability-restful-raw-CG1",
-                "filters": {"key1": "value1"},
-            },
-            "dest": {"kafka_environment": "sit-producer"},
-        },
-    }
-    with open(temp_file.name, "w") as f:
-        toml.dump(toml_content, f)  # Write TOML content
+def mock_aiops_config():
+    """Mock Aiops_config.get_instance to return the parsed TOML config from the existing test file."""
+    config_file = Path("tests/test_config.toml")  # Use the existing test file
+    parsed_config = toml.load(config_file)  # Load the config file
 
-    yield temp_file.name  # Provide file path to test
-    os.remove(temp_file.name)  # Cleanup after test
-
-# Mock Aiops_config to return the test configuration
-@pytest.fixture
-def mock_aiops_config(temp_toml_file):
-    """Mock Aiops_config.get_instance to return the parsed TOML config."""
-    parsed_config = toml.load(temp_toml_file)
-    
     # Convert to expected format
     return {
         "src": parsed_config["config_items"]["src"],
         "dest": parsed_config["config_items"]["dest"],
     }
 
-# Test Kafka_sync initialization using the temp TOML config
 @patch("your_module.Aiops_config.get_instance")
 @patch("your_module.Kafka_Client")  # Mock Kafka Client
-def test_kafka_sync(mock_kafka_client, mock_get_instance, mock_aiops_config, temp_toml_file):
-    """Test Kafka_sync initialization using a mock TOML config."""
+def test_kafka_sync(mock_kafka_client, mock_get_instance, mock_aiops_config):
+    """Test Kafka_sync initialization using the existing TOML config."""
     
     # Mock Aiops_config.get_instance to return mock config
     mock_get_instance.return_value = mock_aiops_config
 
-    # Mock Kafka Client
+    # Mock Kafka Client to prevent real Kafka calls
     mock_kafka_client.return_value = MagicMock()
 
     # Initialize Kafka_sync
-    kafka_sync = Kafka_sync(temp_toml_file)
+    kafka_sync = Kafka_sync("tests/test_config.toml")
 
-    # Assertions
+    # Assertions to validate configuration is correctly loaded
     assert kafka_sync.src_config["kafka_environment"] == "uat-consumer"
     assert kafka_sync.src_config["topics"] == [
         "bpan.observability.restful.rau",
@@ -68,4 +38,6 @@ def test_kafka_sync(mock_kafka_client, mock_get_instance, mock_aiops_config, tem
         "bpan.observability.socket.rau",
     ]
     assert kafka_sync.src_config["consumer_group"] == "bpan-observability-restful-raw-CG1"
+    
+    # Ensure Kafka_Client was called with the expected environment
     mock_kafka_client.assert_called_with("uat-consumer")
