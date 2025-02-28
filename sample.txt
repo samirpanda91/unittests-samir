@@ -1,14 +1,14 @@
-import os
 import pytest
-from unittest.mock import patch
-from kafka_writer import KafkaWriter  # Adjust import based on your module structure
+from unittest.mock import patch, MagicMock
+from pathlib import Path
+from Kafka_sync.kafka_sync import Kafka_sync  # Adjust import as per your project structure
 
 @pytest.fixture
 def mock_ssl_files(tmp_path):
     """Create fake SSL certificate files to prevent Kafka SSL errors."""
-    ca_cert = tmp_path / "ca.pem"
-    key_cert = tmp_path / "topic.key"
-    
+    ca_cert = tmp_path / "fake_cert.pem"
+    key_cert = tmp_path / "fake_key.pem"
+
     ca_cert.write_text("FAKE CA CERT DATA")
     key_cert.write_text("FAKE KEY CERT DATA")
 
@@ -16,29 +16,50 @@ def mock_ssl_files(tmp_path):
 
 @pytest.fixture
 def mock_kafka_config(mock_ssl_files):
-    """Mock Kafka configuration to use fake SSL paths."""
+    """Mock Kafka configuration with SSL paths."""
     ca_path, key_path = mock_ssl_files
 
     return {
-        "security.protocol": "SSL",
-        "ssl.ca.location": ca_path,
-        "ssl.key.location": key_path,
-        "bootstrap.servers": "mock-server:9092",
-        "client.id": "mock-client"
+        "src": {
+            "kafka_environment": "uat-consumer",
+            "topics": ["test_topic"],
+            "consumer_group": "test-group",
+            "filters": {"key1": "value1"},
+            "ssl.ca.location": ca_path  # ✅ Using mocked SSL path
+        },
+        "dest": {
+            "kafka_environment": "sit-producer",
+            "topics": ["test_topic"],
+            "ssl.ca.location": ca_path  # ✅ Using mocked SSL path
+        }
     }
 
-@patch("kafka_writer.KafkaWriter")
-def test_kafka_writer_init(mock_kafka_writer, mock_kafka_config):
-    """Test KafkaWriter initialization with mocked SSL certs."""
-    
-    # Force the mock KafkaWriter to return the fake SSL config
-    mock_kafka_writer.return_value._kafka_conf = mock_kafka_config
-    
-    # Initialize KafkaWriter (it will use the mocked paths)
-    writer = KafkaWriter(config_env="mock_env")
+@patch("Kafka_sync.kafka_sync.Aiops_config.get_instance")
+@patch("Kafka_sync.kafka_sync.Kafka_Client")
+@patch("Kafka_sync.kafka_sync.Kafka_Writer")
+def test_kafka_sync(mock_kafka_writer, mock_kafka_client, mock_get_instance, mock_kafka_config):
+    """Test Kafka_sync initialization with mocked SSL config."""
 
-    # Validate that the producer received the correct config
-    assert writer._kafka_conf["ssl.ca.location"] == mock_kafka_config["ssl.ca.location"]
-    assert writer._kafka_conf["ssl.key.location"] == mock_kafka_config["ssl.key.location"]
+    # ✅ Mock Config with SSL Paths
+    mock_get_instance.return_value = mock_kafka_config
 
-    print("Mocked Kafka Config:", writer._kafka_conf)  # Debugging output
+    # ✅ Mock Kafka Client
+    mock_kafka_client.return_value = MagicMock()
+
+    # ✅ Mock Kafka Writer
+    mock_kafka_writer.return_value = MagicMock()
+
+    # ✅ Print the mocked config for debugging
+    print("Mocked Config:", mock_kafka_config)
+
+    # ✅ Initialize Kafka_sync
+    kafka_sync = Kafka_sync("tests/test_config.toml")
+
+    # ✅ Ensure Kafka_Writer is called
+    mock_kafka_writer.assert_called()
+
+    # ✅ Verify SSL paths are correctly passed
+    assert kafka_sync.config["src"]["ssl.ca.location"] == mock_kafka_config["src"]["ssl.ca.location"]
+    assert kafka_sync.config["dest"]["ssl.ca.location"] == mock_kafka_config["dest"]["ssl.ca.location"]
+
+    print("Test Passed! SSL paths are correctly mocked.")
