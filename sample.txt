@@ -1,161 +1,71 @@
-  return (
-    <Container className="container">
-      {/* Header */}
-      <Typography variant="h4" className="header-title">
-        Advanced Incident Summarization
-      </Typography>
+import pytest
+import tempfile
+import os
+import toml
+from unittest.mock import patch, MagicMock
+from pathlib import Path
+from your_module import Kafka_sync, Aiops_config  # Replace 'your_module' with the actual module name
 
-      <Box className="main-box">
-        {/* Left Panel */}
-        <Paper elevation={4} className="left-panel">
-          <Box className="incident-box">
-            {/* Incident Retrieval */}
-            <Paper elevation={3} className="incident-retrieval">
-              <Typography variant="h6" className="title">
-                Incident Retrieval
-              </Typography>
-              <TextField
-                label="Alert Threshold"
-                variant="outlined"
-                fullWidth
-                value={alertThreshold}
-                onChange={(e) => setAlertThreshold(e.target.value)}
-                className="text-field"
-              />
-              <TextField
-                label="No. of Records"
-                variant="outlined"
-                fullWidth
-                value={nRecords}
-                onChange={(e) => setNRecords(e.target.value)}
-                className="text-field"
-              />
-              <Button
-                variant="contained"
-                onClick={fetchIncidents}
-                fullWidth
-                className="get-incidents-btn"
-                disabled={loading}
-              >
-                {loading ? "Fetching..." : "Get Incidents"}
-              </Button>
-            </Paper>
+# Create a temporary test config file
+@pytest.fixture
+def temp_toml_file():
+    """Creates a temporary TOML configuration file."""
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".toml")
+    toml_content = {
+        "environment": {"env": []},
+        "config_items": {
+            "src": {
+                "topics": [
+                    "bpan.observability.restful.rau",
+                    "bpan.observability.snmp.raw",
+                    "bpan.observability.socket.rau",
+                ],
+                "kafka_environment": "uat-consumer",
+                "consumer_group": "bpan-observability-restful-raw-CG1",
+                "filters": {"key1": "value1"},
+            },
+            "dest": {"kafka_environment": "sit-producer"},
+        },
+    }
+    with open(temp_file.name, "w") as f:
+        toml.dump(toml_content, f)  # Write TOML content
 
-            {/* Summarization Strategy */}
-            <Paper elevation={3} className="summarization-box">
-              <Typography variant="h6" className="title">
-                Summarization
-              </Typography>
-              <FormControl fullWidth className="form-control">
-                <InputLabel shrink>Strategy</InputLabel>
-                <Select
-                  variant="outlined"
-                  value={strategy}
-                  onChange={(e) => setStrategy(e.target.value)}
-                  className="select-field"
-                >
-                  <MenuItem value="nltk">NLTK</MenuItem>
-                  <MenuItem value="pytextrank">PyTextRank</MenuItem>
-                </Select>
-              </FormControl>
-              <Button
-                variant="contained"
-                color="success"
-                fullWidth
-                className="summarize-btn"
-                onClick={summarizeIncident}
-                disabled={!selectedIncident || !strategy}
-              >
-                Summarize
-              </Button>
-            </Paper>
-          </Box>
+    yield temp_file.name  # Provide file path to test
+    os.remove(temp_file.name)  # Cleanup after test
 
-          {/* Dropdown for Incidents */}
-          {incidents.length > 0 && (
-            <FormControl fullWidth className="dropdown">
-              <InputLabel shrink>Incidents</InputLabel>
-              <Select
-                value={selectedIncident || ""}
-                onChange={(e) => setSelectedIncident(e.target.value)}
-                disabled={loading || incidents.length === 0}
-              >
-                {incidents.map((incident) => (
-                  <MenuItem key={incident.id} value={incident.id}>
-                    Incident {incident.id} - {incident.n_alerts} alerts
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          )}
+# Mock Aiops_config to return the test configuration
+@pytest.fixture
+def mock_aiops_config(temp_toml_file):
+    """Mock Aiops_config.get_instance to return the parsed TOML config."""
+    parsed_config = toml.load(temp_toml_file)
+    
+    # Convert to expected format
+    return {
+        "src": parsed_config["config_items"]["src"],
+        "dest": parsed_config["config_items"]["dest"],
+    }
 
-          {/* Incident Details */}
-          {selectedIncident && (
-            <TextField
-              label="Incident Details"
-              multiline
-              rows={14}
-              fullWidth
-              variant="outlined"
-              value={incidentDetails}
-              onChange={(e) => setIncidentDetails(e.target.value)}
-              className="incident-details"
-            />
-          )}
-        </Paper>
+# Test Kafka_sync initialization using the temp TOML config
+@patch("your_module.Aiops_config.get_instance")
+@patch("your_module.Kafka_Client")  # Mock Kafka Client
+def test_kafka_sync(mock_kafka_client, mock_get_instance, mock_aiops_config, temp_toml_file):
+    """Test Kafka_sync initialization using a mock TOML config."""
+    
+    # Mock Aiops_config.get_instance to return mock config
+    mock_get_instance.return_value = mock_aiops_config
 
-        {/* Right Panel (Summary) */}
-        <Paper elevation={4} className="summary-panel">
-          <Typography variant="h6" className="title">
-            Summary
-          </Typography>
+    # Mock Kafka Client
+    mock_kafka_client.return_value = MagicMock()
 
-          {summaryStats && (
-            <Box className="summary-stats">
-              <Box className="stat-item">
-                <DescriptionIcon fontSize="small" color="primary" />
-                <Typography>
-                  Words: {summaryStats.text?.sentences} →{" "}
-                  {summaryStats.summary?.words}
-                </Typography>
-              </Box>
-              <Box className="stat-item">
-                <DescriptionIcon fontSize="small" color="secondary" />
-                <Typography>
-                  Sentences: {summaryStats.text?.sentences} →{" "}
-                  {summaryStats.summary?.sentences}
-                </Typography>
-              </Box>
-              <Box className="stat-item">
-                <DescriptionIcon fontSize="small" color="primary" />
-                <Typography>
-                  Limit Phrase: {summaryStats.params?.limit_phrases}
-                </Typography>
-              </Box>
-              <Box className="stat-item">
-                <DescriptionIcon fontSize="small" color="secondary" />
-                <Typography>
-                  Limit Sentences: {summaryStats.params?.limit_sentences}
-                </Typography>
-              </Box>
-            </Box>
-          )}
+    # Initialize Kafka_sync
+    kafka_sync = Kafka_sync(temp_toml_file)
 
-          {summary && (
-            <TextField
-              label="Summary"
-              multiline
-              rows={24}
-              fullWidth
-              variant="outlined"
-              value={summary || "No data available to summarize"}
-              className="summary-text"
-            />
-          )}
-        </Paper>
-      </Box>
-    </Container>
-  );
-};
-
-export default IncidentSummarization;
+    # Assertions
+    assert kafka_sync.src_config["kafka_environment"] == "uat-consumer"
+    assert kafka_sync.src_config["topics"] == [
+        "bpan.observability.restful.rau",
+        "bpan.observability.snmp.raw",
+        "bpan.observability.socket.rau",
+    ]
+    assert kafka_sync.src_config["consumer_group"] == "bpan-observability-restful-raw-CG1"
+    mock_kafka_client.assert_called_with("uat-consumer")
