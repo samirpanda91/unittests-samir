@@ -6,30 +6,37 @@ from your_module import Kafka_sync, Aiops_config  # Replace 'your_module' with t
 
 @pytest.fixture
 def mock_aiops_config():
-    """Mock Aiops_config.get_instance to return the parsed TOML config from the existing test file."""
+    """Mock Aiops_config.get_instance to return the parsed TOML config with a fake SSL certificate path."""
     config_file = Path("tests/test_config.toml")  # Use the existing test file
     parsed_config = toml.load(config_file)  # Load the config file
 
-    # ✅ Ensure 'filters' is placed at the top level inside 'sync_config'
     return {
-        "src": parsed_config["config_items"]["src"],
+        "src": {
+            **parsed_config["config_items"]["src"],
+            "ssl.ca.location": "/path/to/fake_cert.pem",  # ✅ Fake SSL cert path
+        },
         "dest": parsed_config["config_items"]["dest"],
-        "filters": parsed_config["config_items"]["src"].get("filters", {}),  # ✅ Move filters up
     }
 
 @patch("your_module.Aiops_config.get_instance")
 @patch("your_module.Kafka_Client")  # Mock Kafka Client
 def test_kafka_sync(mock_kafka_client, mock_get_instance, mock_aiops_config):
-    """Test Kafka_sync initialization using the existing TOML config."""
+    """Test Kafka_sync initialization with mock SSL config."""
     
-    # Mock Aiops_config.get_instance to return mock config
+    # ✅ Mock Aiops_config.get_instance to return test config
     mock_get_instance.return_value = mock_aiops_config
 
-    # Mock Kafka Client to prevent real Kafka calls
+    # ✅ Mock Kafka Client to prevent real Kafka connection
     mock_kafka_client.return_value = MagicMock()
 
-    # Initialize Kafka_sync
+    # ✅ Initialize Kafka_sync
     kafka_sync = Kafka_sync("tests/test_config.toml")
 
-    # Assertions to validate configuration is correctly loaded
-    assert kafka_sync.sync_config["filters"] == mock_aiops_config["filters"]  # ✅ Now filters are at sync_config level
+    # ✅ Ensure SSL location is correctly set
+    assert kafka_sync.src_config["ssl.ca.location"] == "/path/to/fake_cert.pem"
+
+    # ✅ Ensure Kafka_Client is called with correct config
+    mock_kafka_client.assert_called_with("uat-consumer")
+
+    # ✅ Print debug info if needed
+    print("SSL CA Location:", kafka_sync.src_config["ssl.ca.location"])
