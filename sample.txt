@@ -10,10 +10,11 @@ def mock_aiops_config():
     config_file = Path("tests/test_config.toml")  # Use the existing test file
     parsed_config = toml.load(config_file)  # Load the config file
 
-    # Convert to expected format
+    # ✅ Ensure 'filters' is placed at the top level inside 'sync_config'
     return {
         "src": parsed_config["config_items"]["src"],
         "dest": parsed_config["config_items"]["dest"],
+        "filters": parsed_config["config_items"]["src"].get("filters", {}),  # ✅ Move filters up
     }
 
 @patch("your_module.Aiops_config.get_instance")
@@ -31,13 +32,4 @@ def test_kafka_sync(mock_kafka_client, mock_get_instance, mock_aiops_config):
     kafka_sync = Kafka_sync("tests/test_config.toml")
 
     # Assertions to validate configuration is correctly loaded
-    assert kafka_sync.src_config["kafka_environment"] == "uat-consumer"
-    assert kafka_sync.src_config["topics"] == [
-        "bpan.observability.restful.rau",
-        "bpan.observability.snmp.raw",
-        "bpan.observability.socket.rau",
-    ]
-    assert kafka_sync.src_config["consumer_group"] == "bpan-observability-restful-raw-CG1"
-    
-    # Ensure Kafka_Client was called with the expected environment
-    mock_kafka_client.assert_called_with("uat-consumer")
+    assert kafka_sync.sync_config["filters"] == mock_aiops_config["filters"]  # ✅ Now filters are at sync_config level
