@@ -2,7 +2,7 @@ import pytest
 import toml
 from unittest.mock import patch, MagicMock
 from pathlib import Path
-from your_module import Kafka_sync, Aiops_config  # Replace 'your_module' with the actual module name
+from your_module import Kafka_sync, Kafka_Writer, Aiops_config  # Replace 'your_module' with actual module name
 
 @pytest.fixture
 def mock_aiops_config():
@@ -15,12 +15,16 @@ def mock_aiops_config():
             **parsed_config["config_items"]["src"],
             "ssl.ca.location": "/path/to/fake_cert.pem",  # ✅ Fake SSL cert path
         },
-        "dest": parsed_config["config_items"]["dest"],
+        "dest": {
+            **parsed_config["config_items"]["dest"],
+            "ssl.ca.location": "/path/to/fake_cert.pem",  # ✅ Fake SSL cert path for producer
+        },
     }
 
 @patch("your_module.Aiops_config.get_instance")
 @patch("your_module.Kafka_Client")  # Mock Kafka Client
-def test_kafka_sync(mock_kafka_client, mock_get_instance, mock_aiops_config):
+@patch("your_module.Kafka_Writer")  # ✅ Mock Kafka Writer
+def test_kafka_sync(mock_kafka_writer, mock_kafka_client, mock_get_instance, mock_aiops_config):
     """Test Kafka_sync initialization with mock SSL config."""
     
     # ✅ Mock Aiops_config.get_instance to return test config
@@ -29,14 +33,21 @@ def test_kafka_sync(mock_kafka_client, mock_get_instance, mock_aiops_config):
     # ✅ Mock Kafka Client to prevent real Kafka connection
     mock_kafka_client.return_value = MagicMock()
 
+    # ✅ Mock Kafka Writer
+    mock_kafka_writer.return_value = MagicMock()
+
     # ✅ Initialize Kafka_sync
     kafka_sync = Kafka_sync("tests/test_config.toml")
 
     # ✅ Ensure SSL location is correctly set
     assert kafka_sync.src_config["ssl.ca.location"] == "/path/to/fake_cert.pem"
+    assert kafka_sync.dest_config["ssl.ca.location"] == "/path/to/fake_cert.pem"
 
     # ✅ Ensure Kafka_Client is called with correct config
     mock_kafka_client.assert_called_with("uat-consumer")
+
+    # ✅ Ensure Kafka_Writer is called
+    mock_kafka_writer.assert_called()
 
     # ✅ Print debug info if needed
     print("SSL CA Location:", kafka_sync.src_config["ssl.ca.location"])
