@@ -1,244 +1,193 @@
 import pytest
 from unittest.mock import patch, MagicMock, call
+import sys
 from pathlib import Path
-import os
-import json
-from Kafka_sync.kafka_sync import Kafka_sync  # Adjust import as per your project structure
+import io
+
+# This will be needed to import the main module
+sys.path.append(str(Path(__file__).parent.parent))
+
+# Import the module to test
+from Kafka_sync import kafka_sync
+from Kafka_sync.kafka_sync import Kafka_sync
 
 @pytest.fixture
-def mock_ssl_files(tmp_path):
-    """Create fake SSL certificate files to prevent Kafka SSL errors."""
-    ca_cert = tmp_path / "fake_cert.pem"
-    key_cert = tmp_path / "fake_key.pem"
-    client_cert = tmp_path / "fake_client_cert.pem"
-    
-    ca_cert.write_text("FAKE CA CERT DATA")
-    key_cert.write_text("FAKE KEY CERT DATA")
-    client_cert.write_text("FAKE CLIENT CERT DATA")
-    
-    return {
-        "ca_cert": str(ca_cert),
-        "key_cert": str(key_cert),
-        "client_cert": str(client_cert)
-    }
+def mock_argparse():
+    """Mock the ArgumentParser to test argument handling."""
+    with patch('argparse.ArgumentParser', autospec=True) as mock_parser_cls:
+        mock_parser = mock_parser_cls.return_value
+        mock_args = MagicMock()
+        mock_parser.parse_args.return_value = mock_args
+        mock_args.toml_file = "test_config.toml"
+        yield mock_parser, mock_args
 
 @pytest.fixture
-def mock_kafka_config(mock_ssl_files):
-    """Mock Kafka configuration with SSL paths."""
-    return {
-        "src": {
-            "kafka_environment": "uat-consumer",
-            "topics": ["test_topic"],
-            "consumer_group": "test-group",
-            "filters": {"key1": "value1"},
-            "ssl.ca.location": mock_ssl_files["ca_cert"],
-            "ssl.certificate.location": mock_ssl_files["client_cert"],
-            "ssl.key.location": mock_ssl_files["key_cert"],
-            "security.protocol": "ssl"
-        },
-        "dest": {
-            "kafka_environment": "sit-producer",
-            "topics": ["test_topic"],
-            "ssl.ca.location": mock_ssl_files["ca_cert"],
-            "ssl.certificate.location": mock_ssl_files["client_cert"],
-            "ssl.key.location": mock_ssl_files["key_cert"],
-            "security.protocol": "ssl"
-        }
-    }
+def mock_kafka_sync():
+    """Mock the Kafka_sync class."""
+    with patch('Kafka_sync.kafka_sync.Kafka_sync', autospec=True) as mock_ks_cls:
+        mock_ks = mock_ks_cls.return_value
+        yield mock_ks
 
 @pytest.fixture
-def kafka_sync_instance(mock_kafka_config):
-    """Create a properly mocked Kafka_sync instance for testing."""
-    with patch("Kafka_sync.kafka_sync.Aiops_config.get_instance") as mock_get_instance:
-        with patch("Kafka_sync.kafka_sync.Kafka_Client") as mock_kafka_client:
-            with patch("Kafka_sync.kafka_sync.Kafka_Writer") as mock_kafka_writer:
-                # Setup mocks
-                mock_get_instance.return_value = mock_kafka_config
-                mock_kafka_client_instance = MagicMock()
-                mock_kafka_client.return_value = mock_kafka_client_instance
-                mock_kafka_writer_instance = MagicMock()
-                mock_kafka_writer.return_value = mock_kafka_writer_instance
-                
-                # Create instance
-                kafka_sync = Kafka_sync("tests/test_config.toml")
-                
-                # Store mocks for later assertions
-                kafka_sync._mock_kafka_client = mock_kafka_client
-                kafka_sync._mock_kafka_client_instance = mock_kafka_client_instance
-                kafka_sync._mock_kafka_writer = mock_kafka_writer
-                kafka_sync._mock_kafka_writer_instance = mock_kafka_writer_instance
-                kafka_sync._mock_get_instance = mock_get_instance
-                
-                yield kafka_sync
+def mock_path():
+    """Mock Path for absolute path testing."""
+    with patch('pathlib.Path', autospec=True) as mock_path_cls:
+        mock_path_instance = mock_path_cls.return_value
+        mock_path_instance.absolute.return_value = "/absolute/path/to/config.toml"
+        yield mock_path_cls
 
-def test_kafka_sync_initialization(kafka_sync_instance, mock_kafka_config):
-    """Test basic initialization of Kafka_sync with proper SSL config."""
-    # Verify Kafka_sync was initialized with correct config
-    assert kafka_sync_instance.config == mock_kafka_config
-    
-    # Verify SSL paths are correctly passed to config
-    assert kafka_sync_instance.config["src"]["ssl.ca.location"] == mock_kafka_config["src"]["ssl.ca.location"]
-    assert kafka_sync_instance.config["dest"]["ssl.ca.location"] == mock_kafka_config["dest"]["ssl.ca.location"]
-    
-    # Verify Kafka_Client was called with correct parameters
-    kafka_sync_instance._mock_kafka_client.assert_called_once()
-    
-    # Verify Kafka_Writer was called with correct parameters
-    kafka_sync_instance._mock_kafka_writer.assert_called_once()
-    
-    # Print debug info
-    print("\nTest initialization passed!")
-    print(f"Source SSL config: {kafka_sync_instance.config['src']}")
-    print(f"Destination SSL config: {kafka_sync_instance.config['dest']}")
+@pytest.fixture
+def mock_print():
+    """Mock print function to capture output."""
+    with patch('builtins.print') as mock_print_func:
+        yield mock_print_func
 
-def test_kafka_writer_ssl_config(kafka_sync_instance, mock_kafka_config):
-    """Test specifically that SSL config is properly passed to Kafka_Writer."""
-    writer_call_args = kafka_sync_instance._mock_kafka_writer.call_args
+def run_main_module():
+    """Helper to run the __main__ module."""
+    # Reset modules to ensure fresh imports
+    if 'Kafka_sync.__main__' in sys.modules:
+        del sys.modules['Kafka_sync.__main__']
     
-    # Get the actual config passed to Kafka_Writer
-    if writer_call_args:
-        args, kwargs = writer_call_args
-        
-        # Print debug info about what was passed to Kafka_Writer
-        print("\nKafka_Writer call arguments:")
-        for i, arg in enumerate(args):
-            print(f"Arg {i}: {arg}")
-        for key, value in kwargs.items():
-            print(f"Kwarg {key}: {value}")
-        
-        # Check if config was passed correctly
-        # Note: The exact argument structure will depend on your implementation
-        # This is just an example - adjust according to your actual code
-        if len(args) > 0 and isinstance(args[0], dict):
-            config = args[0]
-        elif 'config' in kwargs:
-            config = kwargs['config']
-        else:
-            # Try to infer from your implementation
-            # This may vary based on how your Kafka_Writer is implemented
-            config = {}
-            
-        # Assert SSL config is present in the passed config
-        if config:
-            assert 'ssl.ca.location' in config, "ssl.ca.location missing from Kafka_Writer config"
-            assert config['ssl.ca.location'] == mock_kafka_config['dest']['ssl.ca.location']
-            
-            if 'ssl.certificate.location' in mock_kafka_config['dest']:
-                assert 'ssl.certificate.location' in config, "ssl.certificate.location missing"
-                
-            if 'ssl.key.location' in mock_kafka_config['dest']:
-                assert 'ssl.key.location' in config, "ssl.key.location missing"
-    else:
-        pytest.fail("Kafka_Writer was not called with any arguments")
+    # Import and run the main module
+    import Kafka_sync.__main__
 
-@patch("Kafka_sync.kafka_sync.Aiops_config.get_instance")
-@patch("Kafka_sync.kafka_sync.Kafka_Client")
-@patch("Kafka_sync.kafka_sync.Kafka_Writer")
-def test_kafka_sync_with_explicit_mocks(mock_kafka_writer, mock_kafka_client, mock_get_instance, mock_kafka_config):
-    """Test Kafka_sync initialization with explicitly controlled mocks."""
-    # Setup the config mock
-    mock_get_instance.return_value = mock_kafka_config
+# Test for successful execution path
+def test_main_successful_execution(mock_argparse, mock_kafka_sync, mock_path, mock_print):
+    """Test the main function's successful execution path."""
+    # Setup mocks
+    parser, args = mock_argparse
     
-    # Setup the Kafka client mock
-    mock_client_instance = MagicMock()
-    mock_kafka_client.return_value = mock_client_instance
+    # Run the main function
+    with patch.object(sys, 'argv', ['kafka_sync', '-f', 'test_config.toml']):
+        run_main_module()
     
-    # Create a more sophisticated mock for Kafka_Writer that validates the config
-    def kafka_writer_side_effect(*args, **kwargs):
-        # Print detailed info about what's being passed to the writer
-        print("\nKafka_Writer called with:")
-        if args:
-            for i, arg in enumerate(args):
-                print(f"  Arg {i}: {arg}")
-        if kwargs:
-            for key, val in kwargs.items():
-                print(f"  Kwarg {key}: {val}")
-                
-        # Validate SSL config - adjust based on how your Kafka_Writer expects config
-        config = args[0] if args else kwargs.get('config', {})
-        
-        # If your Kafka_Writer is called with specific named parameters, check them explicitly
-        if 'ssl_ca_location' in kwargs:
-            assert kwargs['ssl_ca_location'] == mock_kafka_config['dest']['ssl.ca.location']
-        
-        # For a generic config dictionary
-        if isinstance(config, dict) and 'ssl.ca.location' in config:
-            ssl_path = config['ssl.ca.location']
-            print(f"  Found SSL path: {ssl_path}")
-            assert os.path.exists(ssl_path), f"SSL path doesn't exist: {ssl_path}"
-        
-        # Return a mock instance
-        writer_mock = MagicMock()
-        return writer_mock
+    # Verify argument parsing
+    parser.add_argument.assert_any_call('-f', '--file', dest='toml_file', help=pytest.approx('path to toml config file'))
     
-    mock_kafka_writer.side_effect = kafka_writer_side_effect
-    
-    # Initialize Kafka_sync
-    print("Creating Kafka_sync instance with test config")
-    kafka_sync = Kafka_sync("tests/test_config.toml")
-    
-    # Verify initialization
-    assert kafka_sync.config == mock_kafka_config
-    
-    # Check mock calls
-    mock_kafka_client.assert_called_once()
-    mock_kafka_writer.assert_called_once()
-    
-    # Verify SSL paths in the resulting instance
-    assert kafka_sync.config["src"]["ssl.ca.location"] == mock_kafka_config["src"]["ssl.ca.location"]
-    assert kafka_sync.config["dest"]["ssl.ca.location"] == mock_kafka_config["dest"]["ssl.ca.location"]
-    
-    print("Test with explicit mocks passed! SSL paths are correctly handled.")
+    # Verify Kafka_sync instantiation and execution
+    mock_kafka_sync.start.assert_called_once()
+    mock_print.assert_any_call(f"Starting sync using {'/absolute/path/to/config.toml'}")
 
-@patch("Kafka_sync.kafka_sync.Aiops_config.get_instance")
-def test_kafka_sync_with_real_client_mocks(mock_get_instance, mock_kafka_config, mock_ssl_files):
-    """Test Kafka_sync with more realistic client implementations."""
-    # Setup the config mock
-    mock_get_instance.return_value = mock_kafka_config
+# Test keyboard interrupt handling
+def test_main_keyboard_interrupt(mock_argparse, mock_kafka_sync, mock_print):
+    """Test handling of KeyboardInterrupt."""
+    # Setup mock to raise KeyboardInterrupt
+    mock_kafka_sync.start.side_effect = KeyboardInterrupt()
     
-    # Create realistic mocks for the kafka related classes
-    with patch("Kafka_sync.kafka_sync.Kafka_Client") as mock_kafka_client:
-        with patch("Kafka_sync.kafka_sync.Kafka_Writer") as mock_kafka_writer:
-            # Setup a more sophisticated Kafka client mock
-            mock_client = MagicMock()
-            mock_client.get_kafka_config.return_value = {
-                "bootstrap.servers": "localhost:9092",
-                "security.protocol": "ssl",
-                "ssl.ca.location": mock_ssl_files["ca_cert"],
-                "group.id": "test-group"
-            }
-            mock_kafka_client.return_value = mock_client
-            
-            # Setup a writer mock that validates SSL config
-            def create_writer_mock(*args, **kwargs):
-                writer_mock = MagicMock()
+    # Run the main function
+    with patch.object(sys, 'argv', ['kafka_sync', '-f', 'test_config.toml']):
+        run_main_module()
+    
+    # Verify stop was called and message printed
+    mock_kafka_sync.stop.assert_called_once()
+    mock_print.assert_any_call("Caught Keyboard Interrupt")
+
+# Test exception handling
+def test_main_general_exception(mock_argparse, mock_kafka_sync, mock_print):
+    """Test handling of general exceptions."""
+    # Setup mock to raise Exception
+    test_exception = Exception("Test error")
+    mock_kafka_sync.start.side_effect = test_exception
+    
+    # Run the main function
+    with patch.object(sys, 'argv', ['kafka_sync', '-f', 'test_config.toml']):
+        run_main_module()
+    
+    # Verify exception handling
+    mock_kafka_sync.stop.assert_called_once()
+    mock_print.assert_any_call(f"Exception Caught stopping Kafka Client:\n {test_exception}")
+
+# Test finally block execution
+def test_main_finally_block(mock_argparse, mock_kafka_sync):
+    """Test that the finally block always executes."""
+    # Setup mock to raise Exception and then another exception in stop
+    mock_kafka_sync.start.side_effect = Exception("Start error")
+    mock_kafka_sync.stop.side_effect = Exception("Stop error")
+    
+    # Run the main function
+    with patch.object(sys, 'argv', ['kafka_sync', '-f', 'test_config.toml']):
+        # We expect this to not raise an exception due to the finally block
+        run_main_module()
+    
+    # Verify stop was called even though it raised an exception
+    mock_kafka_sync.stop.assert_called_once()
+
+# Test the __name__ == "__main__" block
+def test_main_module_execution(mock_argparse, mock_kafka_sync):
+    """Test execution when module is run directly."""
+    # Mock __name__ to be "__main__"
+    with patch.dict('sys.modules', {'__main__': sys.modules[__name__]}):
+        with patch('Kafka_sync.__main__.__name__', '__main__'):
+            # Create a mock for the main function
+            with patch('Kafka_sync.__main__.main') as mock_main:
+                # Import the module again
+                if 'Kafka_sync.__main__' in sys.modules:
+                    del sys.modules['Kafka_sync.__main__']
+                import Kafka_sync.__main__
                 
-                # Extract and validate config
-                for arg in args:
-                    if isinstance(arg, dict) and "ssl.ca.location" in arg:
-                        ssl_path = arg["ssl.ca.location"]
-                        assert os.path.exists(ssl_path), f"SSL path doesn't exist: {ssl_path}"
-                        print(f"Writer created with valid SSL path: {ssl_path}")
-                
-                # Add method to simulate producer creation
-                def produce_method(topic, message):
-                    print(f"Mock produce called for topic {topic}")
-                    return True
-                
-                writer_mock.produce.side_effect = produce_method
-                return writer_mock
-                
-            mock_kafka_writer.side_effect = create_writer_mock
+                # Verify main was called
+                mock_main.assert_called_once()
+
+# Test the script with actual argument parsing
+def test_main_with_actual_args():
+    """Test with actual argument parsing (less mocking)."""
+    with patch('Kafka_sync.kafka_sync.Kafka_sync', autospec=True) as mock_ks_cls:
+        mock_ks = mock_ks_cls.return_value
+        
+        # Run with actual argument parsing
+        with patch.object(sys, 'argv', ['kafka_sync', '-f', 'test_config.toml']):
+            # Capture stdout to verify output
+            captured_stdout = io.StringIO()
+            with patch('sys.stdout', captured_stdout):
+                run_main_module()
+        
+        # Verify Kafka_sync was initialized with right file
+        mock_ks_cls.assert_called_once()
+        assert mock_ks_cls.call_args[0][0].endswith('test_config.toml')
+        
+        # Verify start was called
+        mock_ks.start.assert_called_once()
+
+# Test without mocking Path to verify actual path handling
+def test_main_real_path_handling():
+    """Test with real Path handling."""
+    with patch('Kafka_sync.kafka_sync.Kafka_sync', autospec=True) as mock_ks_cls:
+        mock_ks = mock_ks_cls.return_value
+        
+        # Create a test file
+        test_file = Path("temp_test_config.toml")
+        test_file.touch()
+        
+        try:
+            # Run with actual file
+            with patch.object(sys, 'argv', ['kafka_sync', '-f', str(test_file)]):
+                with patch('builtins.print') as mock_print:
+                    run_main_module()
             
-            # Initialize Kafka_sync
-            kafka_sync = Kafka_sync("tests/test_config.toml")
+            # Verify absolute path was used
+            abs_path = test_file.absolute()
+            mock_print.assert_any_call(f"Starting sync using {abs_path}")
             
-            # Verify the SSL config was passed correctly
-            mock_kafka_writer.assert_called_once()
-            
-            # Test producing a message to verify full flow
-            if hasattr(kafka_sync, 'produce_message'):
-                result = kafka_sync.produce_message("test_topic", "test_message")
-                assert result, "produce_message should return True"
-            
-            print("Test with realistic client mocks passed!")
+        finally:
+            # Clean up
+            if test_file.exists():
+                test_file.unlink()
+
+# Test the run loop
+def test_main_run_loop(mock_argparse, mock_kafka_sync, mock_print):
+    """Test the run loop with sleep."""
+    # Setup to run loop once then break
+    def side_effect():
+        # Set run to False after first iteration
+        mock_kafka_sync.run = False
+    
+    mock_kafka_sync.run = True
+    mock_kafka_sync.start.side_effect = side_effect
+    
+    # Run the main function
+    with patch('time.sleep') as mock_sleep:
+        with patch.object(sys, 'argv', ['kafka_sync', '-f', 'test_config.toml']):
+            run_main_module()
+    
+    # Verify sleep was called with argument 4
+    mock_sleep.assert_called_with(4)
