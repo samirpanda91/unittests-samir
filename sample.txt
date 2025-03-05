@@ -1,21 +1,37 @@
-# tests/conftest.py
+import os
+import sys
+from pathlib import Path
 import pytest
-import asyncio
-from app.main import app
+from httpx import AsyncClient
+import anyio
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create session-scoped event loop"""
-    policy = asyncio.WindowsSelectorEventLoopPolicy() if os.name == 'nt' else asyncio.DefaultEventLoopPolicy()
-    loop = policy.new_event_loop()
-    asyncio.set_event_loop(loop)
-    yield loop
-    loop.close()
+base_path = Path(__file__).parent.parent
+sys.path.insert(0, str(base_path / "app"))
 
-@pytest.fixture(scope="session")
-async def async_client():
-    # Explicit startup/shutdown events
-    await app.router.startup()
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        yield client
-    await app.router.shutdown()
+os.environ["ENVIRONMENT"] = "uat"
+
+@pytest.mark.asyncio
+async def test_get_status(async_client: AsyncClient):
+    async with anyio.create_task_group() as tg:
+        response = await async_client.get("/mesh/get_status")
+        assert response.status_code == 200
+        data = response.json()
+        assert all(key in data["status"] for key in ["application", "host", "pid"])
+    
+    # Force cleanup
+    await anyio.sleep(0)  # Allow task group to exit
+
+@pytest.mark.asyncio
+async def test_update_map(async_client: AsyncClient, mocker):
+    mock_result = {"message": "Enrichment maps updated successfully"}
+    mocker.patch(
+        "app.main.auto_enrichment_obj.update_maps",
+        new=AsyncMock(return_value=mock_result)
+    )
+    
+    response = await async_client.get("/update-map/appid_to_1")
+    assert response.status_code == 200
+    assert response.json() == mock_result
+
+    # Explicit mock cleanup
+    mocker.resetall()
