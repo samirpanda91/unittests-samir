@@ -1,16 +1,29 @@
-# tests/test_main.py
-import pytest
-import asyncio
-import atexit
+from fastapi import FastAPI
+from apscheduler.schedulers.background import BackgroundScheduler
+import time
 
-# Add this function to force cleanup
-def exit_gracefully():
-    """Force cleanup of async resources"""
-    loop = asyncio.get_event_loop()
-    if loop.is_running():
-        loop.stop()
-    loop.run_until_complete(loop.shutdown_asyncgens())
-    loop.close()
+app = FastAPI()
 
-# Register the cleanup function
-atexit.register(exit_gracefully)
+# Function with arguments
+def my_scheduled_task(name: str, count: int):
+    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Task executed - Name: {name}, Count: {count}")
+
+# Start the scheduler
+scheduler = BackgroundScheduler()
+
+# Schedule at 12:00 AM
+scheduler.add_job(my_scheduled_task, "cron", hour=0, minute=0, args=["Task1", 1])
+
+# Schedule at 12:02 AM
+scheduler.add_job(my_scheduled_task, "cron", hour=0, minute=2, args=["Task2", 2])
+
+scheduler.start()
+
+@app.get("/")
+def read_root():
+    return {"message": "FastAPI with APScheduler (Scheduled at 12:00 AM & 12:02 AM)"}
+
+# Stop the scheduler when the app shuts down
+@app.on_event("shutdown")
+def shutdown_event():
+    scheduler.shutdown()
