@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 # Assuming mssql_connection and db_action are part of a module named 'database_module'
 from database_module import mssql_connection, db_action
 
+# Function under test
 def test_action():
     conn = mssql_connection(_server, _user, _password, _database, port_port)
     action = db_action(
@@ -20,29 +21,33 @@ def test_action():
         conn.execute_action(action)
     conn.close()
 
+# Action handler
 def _action_handler(action, *args, **kwargs):
     if len(action.data) > 0:
         print(action.data)
         assert True
 
+# Test class
 class TestDatabaseActions(unittest.TestCase):
     @patch('database_module.mssql_connection')
     def test_action(self, mock_mssql_connection):
-        # Mock the connection and its methods
+        # Mock the connection object
         mock_conn = MagicMock()
         mock_mssql_connection.return_value = mock_conn
 
-        # Mock the action and its data
+        # Mock the action object
         mock_action = MagicMock()
         mock_action.data = [{'app_manager': 'John Doe'}]  # Sample data
 
-        # Call the function under test
-        test_action()
+        # Mock db_action to return the mock_action
+        with patch('database_module.db_action', return_value=mock_action):
+            # Call the function under test
+            test_action()
 
         # Assertions to ensure the mocks were called as expected
-        mock_conn.open.assert_called_once()
-        self.assertEqual(mock_conn.execute_action.call_count, 2)
-        mock_conn.close.assert_called_once()
+        mock_conn.open.assert_called_once()  # Ensure open was called once
+        self.assertEqual(mock_conn.execute_action.call_count, 2)  # Ensure execute_action was called twice
+        mock_conn.close.assert_called_once()  # Ensure close was called once
 
 if __name__ == "__main__":
     unittest.main()
