@@ -1,53 +1,36 @@
-import unittest
-from unittest.mock import MagicMock, patch
+import pytest
+from starlette.requests import Request
+from starlette.authentication import AuthenticationError
+from your_module import authenticate_token  # Update with the actual module name
 
-# Assuming mssql_connection and db_action are part of a module named 'database_module'
-from database_module import mssql_connection, db_action
+class MockRequest:
+    """Mock Request class to simulate FastAPI requests."""
+    def __init__(self, headers=None):
+        self.headers = headers or {}
 
-# Function under test
-def test_action():
-    conn = mssql_connection(_server, _user, _password, _database, port_port)
-    action = db_action(
-        name='query',
-        sql=f'begin {_sql} set account on end',
-        type='select',
-        actionComplete=_action_handler
-    )
+@pytest.fixture
+def auth_backend():
+    return authenticate_token(token="valid_token")  # Use the expected token
 
-    action.sql = "select app_manager from v_sn_applications where application_id='123'"
+def test_authenticate_valid_token(auth_backend):
+    """Test authentication with a valid token."""
+    request = MockRequest(headers={"authorization": "valid_token"})
+    
+    credentials, user = pytest.asyncio.run(auth_backend.authenticate(request))
+    
+    assert credentials.scopes == ["authenticated"]
+    assert user.identity == "api_user"
 
-    conn.open()
-    for _ in range(2):
-        conn.execute_action(action)
-    conn.close()
+def test_authenticate_invalid_token(auth_backend):
+    """Test authentication with an invalid token."""
+    request = MockRequest(headers={"authorization": "invalid_token"})
+    
+    with pytest.raises(AuthenticationError, match="Authentication Failed"):
+        pytest.asyncio.run(auth_backend.authenticate(request))
 
-# Action handler
-def _action_handler(action, *args, **kwargs):
-    if len(action.data) > 0:
-        print(action.data)
-        assert True
-
-# Test class
-class TestDatabaseActions(unittest.TestCase):
-    @patch('database_module.mssql_connection')
-    def test_action(self, mock_mssql_connection):
-        # Mock the connection object
-        mock_conn = MagicMock()
-        mock_mssql_connection.return_value = mock_conn
-
-        # Mock the action object
-        mock_action = MagicMock()
-        mock_action.data = [{'app_manager': 'John Doe'}]  # Sample data
-
-        # Mock db_action to return the mock_action
-        with patch('database_module.db_action', return_value=mock_action):
-            # Call the function under test
-            test_action()
-
-        # Assertions to ensure the mocks were called as expected
-        mock_conn.open.assert_called_once()  # Ensure open was called once
-        self.assertEqual(mock_conn.execute_action.call_count, 2)  # Ensure execute_action was called twice
-        mock_conn.close.assert_called_once()  # Ensure close was called once
-
-if __name__ == "__main__":
-    unittest.main()
+def test_authenticate_missing_token(auth_backend):
+    """Test authentication when authorization header is missing."""
+    request = MockRequest(headers={})  # No authorization header
+    
+    with pytest.raises(AuthenticationError, match="Authentication Failed"):
+        pytest.asyncio.run(auth_backend.authenticate(request))
