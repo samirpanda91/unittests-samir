@@ -1,29 +1,48 @@
-from fastapi import FastAPI
-from apscheduler.schedulers.background import BackgroundScheduler
-import time
+import unittest
+from unittest.mock import MagicMock, patch
 
-app = FastAPI()
+# Assuming mssql_connection and db_action are part of a module named 'database_module'
+from database_module import mssql_connection, db_action
 
-# Function with arguments
-def my_scheduled_task(name: str, count: int):
-    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Task executed - Name: {name}, Count: {count}")
+def test_action():
+    conn = mssql_connection(_server, _user, _password, _database, port_port)
+    action = db_action(
+        name='query',
+        sql=f'begin {_sql} set account on end',
+        type='select',
+        actionComplete=_action_handler
+    )
 
-# Start the scheduler
-scheduler = BackgroundScheduler()
+    action.sql = "select app_manager from v_sn_applications where application_id='123'"
 
-# Schedule at 12:00 AM
-scheduler.add_job(my_scheduled_task, "cron", hour=0, minute=0, args=["Task1", 1])
+    conn.open()
+    for _ in range(2):
+        conn.execute_action(action)
+    conn.close()
 
-# Schedule at 12:02 AM
-scheduler.add_job(my_scheduled_task, "cron", hour=0, minute=2, args=["Task2", 2])
+def _action_handler(action, *args, **kwargs):
+    if len(action.data) > 0:
+        print(action.data)
+        assert True
 
-scheduler.start()
+class TestDatabaseActions(unittest.TestCase):
+    @patch('database_module.mssql_connection')
+    def test_action(self, mock_mssql_connection):
+        # Mock the connection and its methods
+        mock_conn = MagicMock()
+        mock_mssql_connection.return_value = mock_conn
 
-@app.get("/")
-def read_root():
-    return {"message": "FastAPI with APScheduler (Scheduled at 12:00 AM & 12:02 AM)"}
+        # Mock the action and its data
+        mock_action = MagicMock()
+        mock_action.data = [{'app_manager': 'John Doe'}]  # Sample data
 
-# Stop the scheduler when the app shuts down
-@app.on_event("shutdown")
-def shutdown_event():
-    scheduler.shutdown()
+        # Call the function under test
+        test_action()
+
+        # Assertions to ensure the mocks were called as expected
+        mock_conn.open.assert_called_once()
+        self.assertEqual(mock_conn.execute_action.call_count, 2)
+        mock_conn.close.assert_called_once()
+
+if __name__ == "__main__":
+    unittest.main()
