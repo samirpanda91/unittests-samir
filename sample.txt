@@ -1,5 +1,12 @@
-<meta name="base-url" content="">
-<script>
-    var baseUrl = document.querySelector("meta[name='base-url']").getAttribute("content");
-    console.log("Base URL:", baseUrl);
-</script>
+.container {
+    display: flex;
+    flex-direction: column; /* Stack buttons vertically */
+    align-items: center;    /* Center horizontally */
+    justify-content: center; /* Center vertically */
+    height: 100vh; /* Full height of the viewport */
+    width: 100%; /* Full width */
+}
+
+button {
+    margin: 10px; /* Space between buttons */
+}
