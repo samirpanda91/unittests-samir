@@ -1,12 +1,11 @@
-.container {
-    display: flex;
-    flex-direction: column; /* Stack buttons vertically */
-    align-items: center;    /* Center horizontally */
-    justify-content: center; /* Center vertically */
-    height: 100vh; /* Full height of the viewport */
-    width: 100%; /* Full width */
-}
+Subject: Urgent: Prioritization Request for Blocker Jira Story [JIRA-XXXX]
 
-button {
-    margin: 10px; /* Space between buttons */
-}
+Hi [Queue Manager’s Name],
+
+I hope you’re doing well.
+
+We have a critical blocker impacting our team and other dependent teams: [JIRA-XXXX] - [Story Title]. This issue is causing delays in [briefly mention the impact, e.g., “processing critical alerts” or “unblocking a major feature rollout”].
+
+Given its urgency and the dependencies on this, could you please prioritize this story in the queue at the earliest? Let us know if any additional details are needed.
+
+Appreciate your support!
