@@ -1,21 +1,5 @@
-import pytest
-from unittest.mock import Mock, patch
-from your_module import mssql_database  # Update with actual module name
-
-@pytest.fixture
-def mock_database():
-    """Mock the parent database class."""
-    with patch("your_module.database", autospec=True) as mock_db:
-        yield mock_db
-
-@pytest.fixture
-def db_instance(mock_database):
-    """Fixture to create an instance of mssql_database."""
-    return mssql_database(connection="main_conn", backup_connection="backup_conn", threads=5)
-
-def test_mssql_database_init(db_instance, mock_database):
-    """Test initialization of mssql_database."""
-    assert db_instance  # Ensure instance is created
-    mock_database.assert_called_once_with(
-        "main_conn", backup_connection="backup_conn", baseThreads=5
-    )  # Verify super() was called properly
+<meta name="base-url" content="">
+<script>
+    var baseUrl = document.querySelector("meta[name='base-url']").getAttribute("content");
+    console.log("Base URL:", baseUrl);
+</script>
