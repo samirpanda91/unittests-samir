@@ -180,16 +180,6 @@ code {
     .panel-container, .panel-container-2 {
         width: 100%;
     }
-
-    .button-custom {
-        padding: 8px 16px;
-        font-size: 14px;
-    }
-
-    .summarize-button {
-        padding: 8px 16px;
-        font-size: 14px;
-    }
 }
 
 @media (max-width: 768px) {
@@ -207,16 +197,6 @@ code {
 
     .panel-container, .panel-container-2 {
         padding: 8px !important;
-    }
-
-    .button-custom {
-        padding: 6px 12px;
-        font-size: 12px;
-    }
-
-    .summarize-button {
-        padding: 6px 12px;
-        font-size: 12px;
     }
 
     .textfield {
@@ -243,16 +223,6 @@ code {
 @media (max-width: 480px) {
     .heading {
         font-size: 18px !important;
-    }
-
-    .button-custom {
-        padding: 4px 8px;
-        font-size: 10px;
-    }
-
-    .summarize-button {
-        padding: 4px 8px;
-        font-size: 10px;
     }
 
     .textfield {
