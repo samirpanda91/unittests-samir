@@ -1,19 +1,18 @@
-/* Change border color for text boxes */
-.MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline {
-    border-color: yellow !important;
+/* Container for the text fields and button */
+.incident-container {
+    display: flex; /* Use Flexbox */
+    align-items: center; /* Vertically center items */
+    gap: 16px; /* Add spacing between items */
 }
 
-/* Change border color on focus for text boxes */
-.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
-    border-color: yellow !important;
+/* Style for text fields */
+.incident-container .textfield {
+    flex: 1; /* Allow text fields to grow and take available space */
+    max-width: 200px; /* Limit the width of text fields */
 }
 
-/* Change border color for dropdowns */
-.MuiSelect-outlined {
-    border-color: yellow !important;
-}
-
-/* Change border color on focus for dropdowns */
-.MuiSelect-outlined.Mui-focused {
-    border-color: yellow !important;
+/* Style for the button */
+.incident-container .button-custom {
+    flex: 0 0 auto; /* Prevent the button from growing */
+    width: auto; /* Allow the button to take its natural width */
 }
