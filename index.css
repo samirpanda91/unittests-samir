@@ -1,18 +1,18 @@
-/* Container for the text fields and button */
-.incident-container {
+/* Container for the dropdown and button */
+.summary-container {
     display: flex; /* Use Flexbox */
     align-items: center; /* Vertically center items */
     gap: 16px; /* Add spacing between items */
 }
 
-/* Style for text fields */
-.incident-container .textfield {
-    flex: 1; /* Allow text fields to grow and take available space */
-    max-width: 200px; /* Limit the width of text fields */
+/* Style for the dropdown */
+.summary-container .strategy-select {
+    flex: 1; /* Allow dropdown to grow and take available space */
+    max-width: 200px; /* Limit the width of the dropdown */
 }
 
 /* Style for the button */
-.incident-container .button-custom {
+.summary-container .summarize-button {
     flex: 0 0 auto; /* Prevent the button from growing */
     width: auto; /* Allow the button to take its natural width */
 }
