@@ -1,24 +1,42 @@
-.textfield .MuiOutlinedInput-input {
-    padding: 12px 14px; /* Adjust padding as needed */
-    text-align: left; /* Align text to the left */
+.box-container {
+    display: flex !important;
+    gap: 10px !important;
+    flex-direction: column;
+    width: 100%;
+}
+
+.panel-container {
+    padding: 12px !important;
+    flex: 1 !important;
+    background-color: #f6f0f0 !important;
+}
+
+.incident-container {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.input-container {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.textfield {
+    background-color: white;
+    height: 36px;
+    flex: 1;
 }
 
 .textfield .MuiInputLabel-outlined {
-    transform: translate(14px, 14px) scale(1); /* Adjust label position */
+    transform: translate(8px, 8px) scale(1);
 }
 
 .textfield .MuiInputLabel-outlined.MuiInputLabel-shrink {
-    transform: translate(14px, -6px) scale(0.75); /* Adjust label position when shrunk */
+    transform: translate(14px, -6px) scale(0.75);
 }
 
-.textfield .MuiOutlinedInput-root {
-    border-radius: 4px; /* Ensure consistent border radius */
-}
-
-.textfield .MuiOutlinedInput-notchedOutline {
-    border-color: #2c65cf; /* Adjust border color */
-}
-
-.textfield .Mui-focused .MuiOutlinedInput-notchedOutline {
-    border-color: #1976d2; /* Adjust focused border color */
+.incident-title {
+    margin-right: 16px; /* Adjust spacing as needed */
 }
